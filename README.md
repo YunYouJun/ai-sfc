@@ -2,6 +2,11 @@
 
 Powered by [DeepSeek 开发平台](https://platform.deepseek.com/).
 
+## Desc
+
+- 横批从右往左，上联在右，下联在左。
+- 横批从左往右，上联在左，下联在右。
+
 ## Dev
 
 ### Config API Key

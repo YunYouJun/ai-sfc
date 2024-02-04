@@ -15,10 +15,16 @@ export const useAppStore = defineStore('app', () => {
     总结: '福',
   })
 
-  /**
-   * 是否反转福字
-   */
-  const inverseFu = useStorage(`${ns}:inverse-fu`, true)
+  const options = useStorage(`${ns}:options`, {
+    /**
+     * 是否翻转对联
+     */
+    inverseCouplets: true,
+    /**
+     * 是否反转福字
+     */
+    inverseFu: true,
+  })
 
   const route = useRoute()
   onMounted(() => {
@@ -31,7 +37,7 @@ export const useAppStore = defineStore('app', () => {
   return {
     loading,
     prompt,
-    inverseFu,
+    options,
 
     coupletsData,
 

@@ -60,11 +60,25 @@ async function shareLink() {
 </script>
 
 <template>
-  <div id="spring-festival-container" ref="sfcContainer" flex="col" class="font-zmx spring-festival-container">
-    <div class="font-zmx m-auto bg-#ff0000 p-2" w="50" text="4xl black">
+  <div
+    id="spring-festival-container" ref="sfcContainer" flex="col"
+    class="font-zmx spring-festival-container"
+  >
+    <div
+      class="font-zmx m-auto bg-#ff0000 p-2" w="50" text="4xl black"
+      :class="{
+        rtl: !app.options.inverseCouplets,
+      }"
+    >
       {{ coupletsData['横批'] }}
     </div>
-    <div flex class="mt-4 items-center justify-between">
+    <div
+      flex
+      class="mt-4 items-center justify-between"
+      :class="{
+        'flex-row-reverse': !app.options.inverseCouplets,
+      }"
+    >
       <div class="spring-festival-couplet">
         {{ coupletsData['上联'] }}
       </div>
@@ -72,7 +86,7 @@ async function shareLink() {
       <div
         relative class="spring-festival-fu-container transition duration-400"
         :class="{
-          'rotate-180': app.inverseFu,
+          'rotate-180': app.options.inverseFu,
         }"
       >
         <div class="spring-festival-fu" />
@@ -94,7 +108,22 @@ async function shareLink() {
     </label>
     <SwitchRoot
       id="airplane-mode"
-      v-model:checked="app.inverseFu"
+      v-model:checked="app.options.inverseFu"
+      class="relative h-[25px] w-[42px] flex cursor-default rounded-full bg-red-500 shadow-sm data-[state=checked]:bg-yellow-500 focus-within:outline-yellow focus-within:outline"
+    >
+      <SwitchThumb
+        class="my-auto block h-[21px] w-[21px] translate-x-0.5 rounded-full bg-white shadow-sm transition-transform duration-100 will-change-transform data-[state=checked]:translate-x-[19px]"
+      />
+    </SwitchRoot>
+  </div>
+
+  <div class="font-zmx flex items-center justify-center gap-2" text="2xl" m="4">
+    <label class="select-none pr-[15px] leading-none" for="airplane-mode">
+      翻转春联
+    </label>
+    <SwitchRoot
+      id="airplane-mode"
+      v-model:checked="app.options.inverseCouplets"
       class="relative h-[25px] w-[42px] flex cursor-default rounded-full bg-red-500 shadow-sm data-[state=checked]:bg-yellow-500 focus-within:outline-yellow focus-within:outline"
     >
       <SwitchThumb
@@ -122,6 +151,11 @@ async function shareLink() {
 <style lang="scss">
 :root {
   --ac-fu-font-size: 5rem;
+}
+
+.rtl {
+  direction: rtl;
+  unicode-bidi: bidi-override;
 }
 
 .spring-festival-fu {

@@ -19,7 +19,11 @@ async function generate() {
     },
   })
   consola.info(data)
-  app.setCoupletsData(data)
+  if (data) {
+    // TODO: add 生成失败提示
+    app.setCoupletsData(data)
+  }
+
   app.loading = false
 }
 
