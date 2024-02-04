@@ -27,5 +27,7 @@ const app = useAppStore()
         </div>
       </template>
     </Suspense>
+
+    <BaseFooter />
   </div>
 </template>

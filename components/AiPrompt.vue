@@ -3,6 +3,9 @@ import consola from 'consola'
 
 const app = useAppStore()
 
+/**
+ * generate sfc 春联
+ */
 async function generate() {
   app.loading = true
   const data = await $fetch('/api/generate', {
@@ -30,6 +33,7 @@ async function generate() {
       class="font-zmx w-full btn" text="black 2xl"
       :class="{ 'btn-disabled': app.loading }"
       flex items-center justify-center
+      :disabled="app.loading"
       @click="generate"
     >
       {{ app.loading ? '生成中...' : '生成春联' }}

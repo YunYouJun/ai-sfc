@@ -112,7 +112,7 @@ async function shareLink() {
     </button>
   </div>
 
-  <div class="font-zmx mt-4 flex" text="black" gap="2">
+  <div class="font-zmx mt-2 flex" text="black" gap="2">
     <button flex items-center justify-center class="w-full btn" text="black" @click="shareLink">
       分享春联链接 <div class="ml-1" i-ri-link />
     </button>

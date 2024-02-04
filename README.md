@@ -1,10 +1,18 @@
 # AI Couplets - AI 对联/春联
 
-## Todo
-
-- [ ] 分享春联
+Powered by [DeepSeek 开发平台](https://platform.deepseek.com/).
 
 ## Dev
+
+### Config API Key
+
+```bash
+cp .env.example .env
+
+# .env
+# you can get free tokens from https://platform.deepseek.com/
+OPENAI_API_KEY=your_deepseek_api_key
+```
 
 ```bash
 pnpm i

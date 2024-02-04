@@ -2,6 +2,9 @@
   "type": "module",
   "private": true,
   "packageManager": "pnpm@8.15.1",
+  "repository": {
+    "url": "https://github.com/YunYouJun/ai-sfc"
+  },
   "scripts": {
     "build": "nuxi build",
     "dev:pwa": "VITE_PLUGIN_PWA=true nuxi dev",

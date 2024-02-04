@@ -11,7 +11,7 @@ import {
 
 export default defineConfig({
   shortcuts: [
-    ['btn', 'text-xl px-4 py-2 rounded inline-block bg-yellow-500 text-white cursor-pointer active:bg-yellow-600 disabled:cursor-default disabled:bg-gray-600 disabled:opacity-50'],
+    ['btn', 'text-xl px-4 py-2 rounded inline-block bg-yellow-500 text-white cursor-pointer active:bg-yellow-600 disabled:cursor-default disabled:bg-yellow-600 disabled:opacity-90'],
     ['icon-btn', 'inline-block cursor-pointer select-none opacity-75 transition duration-200 ease-in-out hover:opacity-100 hover:text-red-600'],
   ],
   presets: [
