@@ -13,16 +13,17 @@ defineProps<{
 
 const app = useAppStore()
 
+const sfcContainer = ref<HTMLElement | null>(null)
+
 /**
  * Download image
  */
 async function download() {
-  const container = document.getElementById('spring-festival-container')
-  if (!container)
+  if (!sfcContainer.value)
     return
   // const url = await screenShotToBase64(container)
 
-  const url = await toPng(container, {
+  const url = await toPng(sfcContainer.value, {
     includeQueryParams: true,
   })
 
@@ -34,12 +35,11 @@ async function download() {
  * Copy image to clipboard
  */
 async function copyImg() {
-  const container = document.getElementById('girid-container')
-  if (!container)
+  if (!sfcContainer.value)
     return
   // const url = await screenShotToBase64(container)
 
-  const blob = await toBlob(container, {
+  const blob = await toBlob(sfcContainer.value, {
     includeQueryParams: true,
   })
 
@@ -60,7 +60,7 @@ async function shareLink() {
 </script>
 
 <template>
-  <div id="spring-festival-container" flex="col" class="font-zmx spring-festival-container">
+  <div id="spring-festival-container" ref="sfcContainer" flex="col" class="font-zmx spring-festival-container">
     <div class="font-zmx m-auto bg-#ff0000 p-2" w="50" text="4xl black">
       {{ coupletsData['横批'] }}
     </div>
