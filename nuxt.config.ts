@@ -17,7 +17,9 @@ export default defineNuxtConfig({
     // when using generate, payload js assets included in sw precache manifest
     // but missing on offline, disabling extraction it until fixed
     payloadExtraction: false,
-    renderJsonPayloads: true,
+    // renderJsonPayloads: true,
+    // https://github.com/nuxt/nuxt/issues/24229
+    appManifest: false,
     typedPages: true,
   },
 
