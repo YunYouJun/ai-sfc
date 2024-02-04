@@ -1,12 +1,13 @@
 <script setup lang="ts">
 // const online = useOnline()
+const app = useAppStore()
 </script>
 
 <template>
   <div>
     <!-- <Logos mb-6 /> -->
 
-    <h2 class="font-zmx my-4" text="4xl">
+    <h2 class="font-zmx my-4" text="dark:yellow 4xl">
       AI 春联
     </h2>
 
@@ -14,7 +15,7 @@
 
     <Suspense>
       <ClientOnly>
-        <SpringFestivalCouplets />
+        <SpringFestivalCouplets :couplets-data="app.coupletsData" />
         <!-- <PageView v-if="online" /> -->
         <!-- <div v-else text-gray:80>
           You're offline
