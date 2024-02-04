@@ -21,7 +21,7 @@ export interface SprintFestivalCouplets {
 
 export async function getCouplets(couplet: string) {
   const tooltip = [
-    '请根据我的提示生成一组春联，包含上联、下联各一句，每句字数在五到十三字之间，并附上一个恰当的横批。',
+    '请根据我的提示生成一组春联，包含上联、下联各一句，每句字数在五到十三字之间，并附上一个恰当的不超过五个字的横批。',
     '并给出一个字总结。',
     '不需要标点符号，尽量不要使用生僻字。',
     '以可以被 JSON.parse 解析的字符串格式给出，务必不要生成多余文本。',
