@@ -12,6 +12,6 @@ export const openai = new OpenAI({
 export const baseModel = 'deepseek-chat'
 
 export const baseChatCompletionCreateParams: Partial<OpenAI.ChatCompletionCreateParamsNonStreaming> = {
-  max_tokens: 300,
+  max_tokens: 100,
   // stream: true
 }
