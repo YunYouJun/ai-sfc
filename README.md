@@ -2,6 +2,8 @@
 
 Powered by [DeepSeek 开发平台](https://platform.deepseek.com/).
 
+- 字体：[MaShanZheng | Google Fonts](https://fonts.google.com/specimen/Ma+Shan+Zheng)
+
 ## Desc
 
 - 横批从右往左，上联在右，下联在左。
