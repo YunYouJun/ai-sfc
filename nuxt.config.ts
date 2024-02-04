@@ -81,4 +81,12 @@ export default defineNuxtConfig({
   eslintConfig: {
     setup: false,
   },
+
+  vue: {
+    compilerOptions: {
+      isCustomElement: (tag) => {
+        return ['github-corners'].includes(tag)
+      },
+    },
+  },
 })
