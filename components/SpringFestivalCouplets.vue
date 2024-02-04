@@ -104,18 +104,18 @@ async function shareLink() {
   </div>
 
   <div class="font-zmx mt-4 flex" text="black" gap="2">
-    <button class="w-full btn" text="black" @click="download">
+    <SfcButton icon="i-ri-download-line" @click="download">
       下载图片
-    </button>
-    <button class="w-full btn" text="black" @click="copyImg">
+    </SfcButton>
+    <SfcButton icon="i-ri-clipboard-line" @click="copyImg">
       拷贝图片
-    </button>
+    </SfcButton>
   </div>
 
   <div class="font-zmx mt-2 flex" text="black" gap="2">
-    <button flex items-center justify-center class="w-full btn" text="black" @click="shareLink">
-      分享春联链接 <div class="ml-1" i-ri-link />
-    </button>
+    <SfcButton icon="i-ri-link" @click="shareLink">
+      分享春联链接
+    </SfcButton>
   </div>
 </template>
 

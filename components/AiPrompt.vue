@@ -1,12 +1,17 @@
 <script lang="ts" setup>
 import consola from 'consola'
 
+import { useMagicKeys } from '@vueuse/core'
+
 const app = useAppStore()
 
 /**
  * generate sfc 春联
  */
 async function generate() {
+  if (app.loading)
+    return
+
   app.loading = true
   const data = await $fetch('/api/generate', {
     query: {
@@ -17,6 +22,13 @@ async function generate() {
   app.setCoupletsData(data)
   app.loading = false
 }
+
+// Ctrl + Enter / Cmd + Enter to generate
+const { Ctrl_enter, Cmd_enter } = useMagicKeys()
+watch(() => [Cmd_enter.value, Ctrl_enter.value], (v) => {
+  if (v)
+    generate()
+})
 </script>
 
 <template>
