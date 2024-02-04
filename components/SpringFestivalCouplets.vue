@@ -49,7 +49,7 @@ async function copyImg() {
 
 const { copy, copied } = useClipboard()
 async function shareLink() {
-  const txt = `${window.location.origin}${import.meta.env.BASE_URL.replace('_nuxt/', '')}?couplets=${encodeURIComponent(JSON.stringify(app.coupletsData))}&prompt=${encodeURIComponent(app.prompt)}`
+  const txt = `${window.location.origin}/?couplets=${encodeURIComponent(JSON.stringify(app.coupletsData))}&prompt=${encodeURIComponent(app.prompt)}`
   await copy(txt)
 
   if (copied.value) {
