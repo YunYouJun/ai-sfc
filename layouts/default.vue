@@ -1,9 +1,7 @@
 <template>
-  <main class="px-10 py-20 text-center">
+  <main class="p-6 text-center">
+    <DarkToggle class="absolute right-4 top-4" />
+
     <slot />
-    <Footer />
-    <div class="mx-auto mt-5 text-center text-sm opacity-25">
-      [Default Layout]
-    </div>
   </main>
 </template>
