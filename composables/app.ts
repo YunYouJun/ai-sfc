@@ -20,6 +20,17 @@ export const useAppStore = defineStore('app', () => {
    */
   const inverseFu = useStorage(`${ns}:inverse-fu`, true)
 
+  const route = useRoute()
+  onMounted(() => {
+    if (route.query.couplets) {
+      console.log(decodeURIComponent(route.query.couplets as string))
+      coupletsData.value = JSON.parse(decodeURIComponent(route.query.couplets as string))
+      console.log('coupletsData', coupletsData.value)
+    }
+    if (route.query.prompt)
+      prompt.value = decodeURIComponent(route.query.prompt as string)
+  })
+
   return {
     loading,
     prompt,

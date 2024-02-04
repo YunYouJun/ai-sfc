@@ -1,7 +1,9 @@
 <script lang="ts" setup>
-import { toPng } from 'html-to-image'
+import { toBlob, toPng } from 'html-to-image'
 import { downloadDataUrlAsImage } from '@yunlefun/utils'
 import { SwitchRoot, SwitchThumb } from 'radix-vue'
+import { copyBlobToClipboard } from 'copy-image-clipboard'
+import { useClipboard } from '@vueuse/core'
 import { suggestedCoupletsFilename } from '~/config'
 import type { SprintFestivalCouplets } from '~/packages/ai/src'
 
@@ -11,6 +13,9 @@ defineProps<{
 
 const app = useAppStore()
 
+/**
+ * Download image
+ */
 async function download() {
   const container = document.getElementById('spring-festival-container')
   if (!container)
@@ -23,6 +28,34 @@ async function download() {
 
   if (url)
     downloadDataUrlAsImage(url, suggestedCoupletsFilename)
+}
+
+/**
+ * Copy image to clipboard
+ */
+async function copyImg() {
+  const container = document.getElementById('girid-container')
+  if (!container)
+    return
+  // const url = await screenShotToBase64(container)
+
+  const blob = await toBlob(container, {
+    includeQueryParams: true,
+  })
+
+  if (blob)
+    copyBlobToClipboard(blob)
+}
+
+const { copy, copied } = useClipboard()
+async function shareLink() {
+  const txt = `${window.location.origin}${import.meta.env.BASE_URL.replace('_nuxt/', '')}?couplets=${encodeURIComponent(JSON.stringify(app.coupletsData))}&prompt=${encodeURIComponent(app.prompt)}`
+  await copy(txt)
+
+  if (copied.value) {
+    // eslint-disable-next-line no-alert
+    alert('已复制链接')
+  }
 }
 </script>
 
@@ -74,8 +107,14 @@ async function download() {
     <button class="w-full btn" text="black" @click="download">
       下载图片
     </button>
-    <button class="w-full btn" text="black" @click="download">
+    <button class="w-full btn" text="black" @click="copyImg">
       拷贝图片
+    </button>
+  </div>
+
+  <div class="font-zmx mt-4 flex" text="black" gap="2">
+    <button flex items-center justify-center class="w-full btn" text="black" @click="shareLink">
+      分享春联链接 <div class="ml-1" i-ri-link />
     </button>
   </div>
 </template>
