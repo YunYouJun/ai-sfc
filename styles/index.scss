@@ -1,11 +1,12 @@
 // https://fonts.google.com/share?selection.family=Zhi+Mang+Xing
 .font-zmx {
-  font-family: "Zhi Mang Xing", 华文楷体, KaiTi, "STKaiti", "Kaiti SC", "楷体","楷体_GB2312", cursive, serif;
+  font-family: 'Zhi Mang Xing', 华文楷体, KaiTi, 'STKaiti', 'Kaiti SC', '楷体',
+    '楷体_GB2312', cursive, serif;
   font-weight: 400;
   font-style: normal;
 }
 
 @font-face {
-  font-family: "Zhi Mang Xing";
+  font-family: 'Zhi Mang Xing';
   src: url('/fonts/MaShanZheng-Regular.ttf') format('truetype');
 }
