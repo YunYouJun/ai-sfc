@@ -24,8 +24,8 @@ export async function getCouplets(couplet: string) {
     '请根据我的提示生成一组春联，包含上联、下联各一句，每句字数在五到十三字之间，并附上一个恰当的横批。',
     '并给出一个字总结。',
     '不需要标点符号，尽量不要使用生僻字。',
-    '以下述 JSON 给出：',
-    `export interface SprintFestivalCouplets {
+    '以可以被 JSON.parse 解析的字符串格式给出，务必不要生成多余文本。',
+    `参考 TS 类型：export interface SprintFestivalCouplets {
   上联: string
   下联: string
   横批: string

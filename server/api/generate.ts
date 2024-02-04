@@ -7,7 +7,15 @@ export default defineEventHandler(async (event) => {
   const { content } = data
 
   const unwrapperContent = (content || '{}')?.replace('```json\n', '').replace('```', '')
-  const coupletData = JSON.parse(unwrapperContent) as SprintFestivalCouplets
+  let coupletData: SprintFestivalCouplets | undefined
+  try {
+    coupletData = JSON.parse(unwrapperContent) as SprintFestivalCouplets
+  }
+  catch (e) {
+    // eslint-disable-next-line no-console
+    console.log(content)
+    console.error(e)
+  }
 
   return coupletData
 })

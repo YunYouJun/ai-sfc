@@ -155,5 +155,6 @@ async function shareLink() {
   padding: 1.5rem 0.4rem 1.4rem 0.4rem;
   // 文字 gap
   letter-spacing: 1rem;
+  white-space: nowrap;
 }
 </style>
