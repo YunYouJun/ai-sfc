@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "consola": "^3.2.3",
+    "dotenv": "^16.4.1",
+    "openai": "^4.26.0"
+  }
+}
