@@ -1,4 +1,4 @@
-# AI Couplets - AI 对联/春联
+# AI SFC (Spring Festival Couplets) - AI 春联
 
 Powered by [DeepSeek 开发平台](https://platform.deepseek.com/).
 
