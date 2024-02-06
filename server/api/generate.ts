@@ -21,6 +21,12 @@ export default defineEventHandler(async (event) => {
   let coupletData: SprintFestivalCouplets | undefined
   try {
     coupletData = JSON.parse(unWrapperContent) as SprintFestivalCouplets
+
+    // remove the last comma and period
+    if (coupletData['上联'].endsWith('，') && coupletData['下联'].endsWith('。')) {
+      coupletData['下联'] = coupletData['下联'].slice(0, -1)
+      coupletData['上联'] = coupletData['上联'].slice(0, -1)
+    }
   }
   catch (e) {
     // eslint-disable-next-line no-console

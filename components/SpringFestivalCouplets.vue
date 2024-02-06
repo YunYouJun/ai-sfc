@@ -70,7 +70,9 @@ async function shareLink() {
         rtl: !app.options.inverseCouplets,
       }"
     >
-      {{ coupletsData['横批'] }}
+      <Transition name="fade" mode="out-in">
+        <span v-if="app.visible">{{ coupletsData['横批'] }}</span>
+      </Transition>
     </div>
     <div
       flex
@@ -80,7 +82,9 @@ async function shareLink() {
       }"
     >
       <div class="spring-festival-couplet">
-        {{ coupletsData['上联'] }}
+        <Transition name="fade" mode="out-in">
+          <span v-if="app.visible">{{ coupletsData['上联'] }}</span>
+        </Transition>
       </div>
 
       <div
@@ -92,12 +96,16 @@ async function shareLink() {
         <div class="spring-festival-fu" />
         <!-- not inset-0 for compatibility -->
         <span class="fu-char absolute bottom-0 left-0 right-0 top-0">
-          {{ coupletsData['总结'].slice(0, 1) }}
+          <Transition name="fade" mode="out-in">
+            <span v-if="app.visible">{{ coupletsData['总结'].slice(0, 1) }}</span>
+          </Transition>
         </span>
       </div>
 
       <div class="spring-festival-couplet">
-        {{ coupletsData['下联'] }}
+        <Transition name="fade" mode="out-in">
+          <span v-if="app.visible">{{ coupletsData['下联'] }}</span>
+        </Transition>
       </div>
     </div>
   </div>

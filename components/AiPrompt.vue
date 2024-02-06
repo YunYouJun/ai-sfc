@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import consola from 'consola'
-
 import { useMagicKeys } from '@vueuse/core'
 import { config } from '~/config'
 import { apiGenerate } from '~/utils'
@@ -16,11 +14,6 @@ async function generate() {
     return
 
   app.loading = true
-  // const data = await $fetch('/api/generate', {
-  //   query: {
-  //     prompt: app.prompt,
-  //   },
-  // })
   const data = await apiGenerate({
     prompt: app.prompt,
   })
