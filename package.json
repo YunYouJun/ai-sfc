@@ -18,6 +18,7 @@
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
+    "ofetch": "1.2.1",
     "wc-github-corners": "^0.1.6"
   },
   "devDependencies": {

@@ -3,27 +3,28 @@ import consola from 'consola'
 
 import { useMagicKeys } from '@vueuse/core'
 import { config } from '~/config'
+import { apiGenerate } from '~/utils'
 
 const app = useAppStore()
 
 /**
  * generate sfc 春联
+ * not use ofetch see https://github.com/unjs/ofetch/issues/294
  */
 async function generate() {
   if (app.loading)
     return
 
   app.loading = true
-  const data = await $fetch('/api/generate', {
-    query: {
-      prompt: app.prompt,
-    },
+  // const data = await $fetch('/api/generate', {
+  //   query: {
+  //     prompt: app.prompt,
+  //   },
+  // })
+  const data = await apiGenerate({
+    prompt: app.prompt,
   })
-  consola.info(data)
-  if (data) {
-    // TODO: add 生成失败提示
-    app.setCoupletsData(data)
-  }
+  app.setCoupletsData(data)
 
   app.loading = false
 }

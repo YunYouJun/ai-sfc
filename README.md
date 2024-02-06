@@ -29,3 +29,4 @@ pnpm dev
 ## FAQ
 
 - [Error when opening nuxt3 web link in China's QQ application](https://github.com/nuxt/nuxt/issues/24229)
+- `ofetch` in QQ browser: [unjs/ofetch#294](https://github.com/unjs/ofetch/issues/294)
