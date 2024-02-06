@@ -1,5 +1,3 @@
-import type { SprintFestivalCouplets } from '~/packages/ai/src'
-
 /**
  * generate couplets
  */
