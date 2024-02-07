@@ -97,7 +97,7 @@ async function shareLink() {
         <!-- not inset-0 for compatibility -->
         <span class="fu-char absolute bottom-0 left-0 right-0 top-0">
           <Transition name="fade" mode="out-in">
-            <span v-if="app.visible">{{ coupletsData['总结'].slice(0, 1) }}</span>
+            <span v-if="app.visible && coupletsData['总结']">{{ coupletsData['总结'].slice(0, 1) }}</span>
           </Transition>
         </span>
       </div>
