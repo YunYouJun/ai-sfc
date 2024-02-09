@@ -44,8 +44,8 @@ export async function getCouplets(prompt: string) {
   const messages: OpenAI.ChatCompletionMessageParam[] = [
     {
       role: 'system',
-      content: tooltip.join('\n'),
-    }
+      content: tooltip,
+    },
   ]
 
   if (prompt)

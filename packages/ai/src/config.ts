@@ -15,5 +15,8 @@ export const baseModel = process.env.MODEL_NAME || 'deepseek-chat'
 
 export const baseChatCompletionCreateParams: Partial<OpenAI.ChatCompletionCreateParamsNonStreaming> = {
   max_tokens: 100,
+  // TODO: for use control
+  // presence_penalty: 0,
+  // frequency_penalty: 0,
   // stream: true
 }
