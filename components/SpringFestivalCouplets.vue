@@ -6,6 +6,7 @@ import { copyBlobToClipboard } from 'copy-image-clipboard'
 import { useClipboard } from '@vueuse/core'
 import { suggestedCoupletsFilename } from '~/config'
 import type { SprintFestivalCouplets } from '~/packages/ai/src'
+import pkg from '~/package.json'
 
 defineProps<{
   coupletsData: SprintFestivalCouplets
@@ -55,6 +56,67 @@ async function shareLink() {
   if (copied.value) {
     // eslint-disable-next-line no-alert
     alert('已复制链接')
+  }
+}
+
+/**
+ * 复制春联文字
+ */
+async function copyText() {
+  const { 上联 } = app.coupletsData
+
+  const minWidth = app.coupletsData['横批'].length + 3 * 2
+  //   const txt = `
+  //    *
+  //   * *
+  //  *   *
+  // *  ${app.coupletsData['总结']}  *
+  //  *   *
+  //   * *
+  //    *
+  // `
+  const fuLines = [
+    '口',
+    '口　口',
+    // eslint-disable-next-line no-irregular-whitespace, vue/no-irregular-whitespace
+    `口　${app.coupletsData['总结']}　口`,
+    '口　口',
+    '口',
+  ]
+
+  function getFuChar(row: number) {
+    // const fuLine = txt.split('\n')[row] || ''
+    const fuLine = fuLines[row] || '　'
+    // 填充空格
+    // eslint-disable-next-line no-irregular-whitespace, vue/no-irregular-whitespace
+    // "　" 全角空格 U+3000
+    const halfWidth = (minWidth - fuLine.length) / 2
+    return '　'.repeat(halfWidth) + fuLine + '　'.repeat(halfWidth)
+  }
+
+  const lines = []
+  const halfWidth = (minWidth - app.coupletsData['横批'].length) / 2 + 1
+  const halfSpace = '　'.repeat(halfWidth)
+  lines.push(`${halfSpace}${app.coupletsData['横批']}${halfSpace}`)
+  lines.push('')
+
+  // fu start
+  const fuStartLine = Math.floor(上联.length <= 5 ? 0 : (上联.length - 5) / 2)
+
+  const cLen = app.coupletsData['上联'].length
+  for (let i = 0; i < cLen; i++)
+    lines.push(`${app.coupletsData['上联'][i]} ${getFuChar(i - fuStartLine)} ${app.coupletsData['下联'][i]}`)
+
+  // app.coupletsData['上联']
+  lines.push('')
+  lines.push(`春联生成自：${pkg.homepage}`)
+
+  const txt = lines.join('\n')
+  await copy(txt)
+
+  if (copied.value) {
+    // eslint-disable-next-line no-alert
+    alert(txt)
   }
 }
 </script>
@@ -151,7 +213,11 @@ async function shareLink() {
 
   <div class="font-zmx mt-2 flex" text="black" gap="2">
     <SfcButton icon="i-ri-link" @click="shareLink">
-      分享春联链接
+      分享链接
+    </SfcButton>
+
+    <SfcButton icon="i-ri-file-copy-line" @click="copyText">
+      复制春联
     </SfcButton>
   </div>
 </template>

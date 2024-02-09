@@ -17,6 +17,9 @@ Powered by [DeepSeek 开发平台](https://platform.deepseek.com/).
 cp .env.example .env
 
 # .env
+# Use DeepSeek
+AI_SERVICE_URL='https://api.deepseek.com/v1'
+MODEL_NAME='deepseek-chat'
 # you can get free tokens from https://platform.deepseek.com/
 OPENAI_API_KEY=your_deepseek_api_key
 ```

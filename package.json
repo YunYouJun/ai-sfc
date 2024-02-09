@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "packageManager": "pnpm@8.15.1",
+  "homepage": "https://ai-sfc.yunyoujun.cn",
   "repository": {
     "url": "https://github.com/YunYouJun/ai-sfc"
   },
