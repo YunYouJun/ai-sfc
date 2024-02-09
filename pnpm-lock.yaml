@@ -19,8 +19,8 @@ importers:
         specifier: ^2.6.4
         version: 2.6.4(@vue/compiler-sfc@3.4.15)(eslint-plugin-format@0.1.0)(eslint-ts-patch@8.56.0-0)(typescript@5.3.3)
       '@iconify-json/carbon':
-        specifier: ^1.1.28
-        version: 1.1.28
+        specifier: ^1.1.29
+        version: 1.1.29
       '@iconify-json/ri':
         specifier: ^1.1.19
         version: 1.1.19
@@ -103,8 +103,8 @@ importers:
         specifier: ^16.4.1
         version: 16.4.1
       openai:
-        specifier: ^4.26.1
-        version: 4.26.1
+        specifier: ^4.27.0
+        version: 4.27.0
 
   scripts:
     devDependencies:
@@ -2030,8 +2030,8 @@ packages:
     resolution: {integrity: sha512-6EwiSjwWYP7pTckG6I5eyFANjPhmPjUX9JRLUSfNPC7FX7zK9gyZAfUEaECL6ALTpGX5AjnBq3C9XmVWPitNpw==}
     dev: true
 
-  /@iconify-json/carbon@1.1.28:
-    resolution: {integrity: sha512-tg+h0i+69JrIqUpQva2Mt611KdLMeCyibqS7lIqaMRXJgnalHtdqDcdZAKCSLb/hTbkJHyk0NCpQSYJ3f/v51w==}
+  /@iconify-json/carbon@1.1.29:
+    resolution: {integrity: sha512-zfyvX/kPItpBEU0fV0FhMW8Ln8PJX6is/L/GX7z9OOoVWEz1k8IlbK3KoBBH6ODZ8HHKG7HQ9FZ4nNl6RDe0Lw==}
     dependencies:
       '@iconify/types': 2.0.0
     dev: true
@@ -8290,8 +8290,8 @@ packages:
       is-wsl: 2.2.0
     dev: true
 
-  /openai@4.26.1:
-    resolution: {integrity: sha512-DvWbjhWbappsFRatOWmu4Dp1/Q4RG9oOz6CfOSjy0/Drb8G+5iAiqWAO4PfpGIkhOOKtvvNfQri2SItl+U7LhQ==}
+  /openai@4.27.0:
+    resolution: {integrity: sha512-j1ZEx9NiBpm31rxWqQTjQt1QvH/8001xHsc/pRoPjkRDYWONCb+qkR6L9C7Wl6ar72Mz1ybtn1bv6fqAoTPlKw==}
     hasBin: true
     dependencies:
       '@types/node': 18.19.14
