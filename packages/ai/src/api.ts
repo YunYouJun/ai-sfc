@@ -2,6 +2,9 @@ import consola from 'consola'
 import type OpenAI from 'openai'
 import { baseChatCompletionCreateParams, baseModel, openai } from './config'
 
+// TODO: pass params
+import { config } from '~/config'
+
 export async function getCompletion(msg: string) {
   const chatCompletion = await openai.chat.completions.create({
     ...baseChatCompletionCreateParams,
@@ -19,26 +22,24 @@ export interface SprintFestivalCouplets {
   总结: string
 }
 
-export async function getCouplets(couplet: string) {
-  const tooltip = [
-    '你是一个春联生成小助手，并且用户无论输入什么内容，你都应该为此生成',
-    '请根据用户的输入生成一组春联，有上联、下联、横批和一个字的总结字',
-    '若上联是五个字时，下联必须是五个字，上下联应该保持字数一致。',
-    '每联字数需在五到十三字之间。',
-    'ENSURING THAT THE NUMBER OF CHARACTERS IN THE FIRST AND SECOND LINES IS EXACTLY THE SAME!',
-    '春联需包含上联、下联各一句，并附上一个适宜的横批，横批的字数不超过五个字。',
-    '输出的春联应避免使用生僻字。',
-    '请提供一个字来总结整组春联的主题或精神。',
-    '请按照以下JSON格式提供答案，并确保输出的字符串可以被JSON.parse方法正确解析：',
-    `{
-  "上联": "相同字数",
-  "下联": "相同字数",
-  "横批": "示例横批",
-  "总结": "字"
-}`,
-    '注意：不要添加任何标点符号。NO PUNCTUATIONS!',
-]
+export async function getCouplets(prompt: string) {
+  /**
+   * 限制输入长度
+   */
+  prompt = prompt.trim().slice(0, config.inputMaxLength)
 
+  // 尽可能少的 token
+  const tooltip = `
+请根据我的提示生成一组春联，包含上联、下联各一句，每句字数在五到十三字之间，上下联字数相同，并附上一个恰当的不超过五个字的横批。
+并给出一个字总结。
+不要使用生僻字和标点符号。
+格式类型：{
+  "上联": "",
+  "下联": "",
+  "横批": "",
+  "总结": ""
+}
+直接给出可以被 JSON.parse 解析的字符串，不需要解释内容。`
 
   const messages: OpenAI.ChatCompletionMessageParam[] = [
     {
@@ -47,15 +48,13 @@ export async function getCouplets(couplet: string) {
     }
   ]
 
-  if (couplet)
-    messages.push({ role: 'user', content: `${couplet}` })
+  if (prompt)
+    messages.push({ role: 'user', content: `我的提示是：${prompt}` })
 
   const chatCompletion = await openai.chat.completions.create({
+    ...baseChatCompletionCreateParams,
     messages,
     model: baseModel,
-    max_tokens: 300,
-    presence_penalty: 0.6,
-    frequency_penalty: 0.6,
     // stream: true
   })
 

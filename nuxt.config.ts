@@ -1,6 +1,9 @@
 import { pwa } from './config/pwa'
 import { appDescription } from './constants/index'
 
+// add build time to env
+import.meta.env.VITE_APP_BUILD_TIME = new Date().getTime().toString()
+
 export default defineNuxtConfig({
   ssr: false,
 
@@ -47,7 +50,8 @@ export default defineNuxtConfig({
 
   app: {
     head: {
-      viewport: 'width=device-width,initial-scale=1',
+      // no scale
+      viewport: 'width=device-width,initial-scale=1,user-scalable=no',
       // <link rel="preconnect" href="https://fonts.googleapis.com">
       // <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       // <link href="https://fonts.googleapis.com/css2?family=Zhi+Mang+Xing&display=swap" rel="stylesheet">
@@ -65,6 +69,16 @@ export default defineNuxtConfig({
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
         { name: 'description', content: appDescription },
         { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
+      ],
+      script: [
+        {
+          type: 'text/javascript',
+          innerHTML: `    (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "kwm5q1tej7");`,
+        },
       ],
     },
   },

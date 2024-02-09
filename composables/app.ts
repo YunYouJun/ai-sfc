@@ -7,6 +7,10 @@ const ns = 'ai-sfc'
 export const useAppStore = defineStore('app', () => {
   const loading = ref(false)
   const prompt = useStorage(`${ns}:prompt`, '')
+  /**
+   * toggle for fade transition
+   */
+  const visible = ref(true)
 
   const coupletsData = useStorage<SprintFestivalCouplets>(`${ns}:couplets-data`, {
     上联: '这里是上联',
@@ -15,10 +19,16 @@ export const useAppStore = defineStore('app', () => {
     总结: '福',
   })
 
-  /**
-   * 是否反转福字
-   */
-  const inverseFu = useStorage(`${ns}:inverse-fu`, true)
+  const options = useStorage(`${ns}:options`, {
+    /**
+     * 是否翻转对联
+     */
+    inverseCouplets: true,
+    /**
+     * 是否反转福字
+     */
+    inverseFu: true,
+  })
 
   const route = useRoute()
   onMounted(() => {
@@ -29,14 +39,18 @@ export const useAppStore = defineStore('app', () => {
   })
 
   return {
+    visible,
     loading,
     prompt,
-    inverseFu,
+    options,
 
     coupletsData,
 
-    setCoupletsData(data: SprintFestivalCouplets) {
+    async setCoupletsData(data: SprintFestivalCouplets) {
+      visible.value = false
       coupletsData.value = data
+      await nextTick()
+      visible.value = true
     },
   }
 })
