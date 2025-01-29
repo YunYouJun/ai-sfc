@@ -1,6 +1,6 @@
-import { acceptHMRUpdate, defineStore } from 'pinia'
+import type { SprintFestivalCouplets } from '~~/packages/ai/src'
 import { useStorage } from '@vueuse/core'
-import type { SprintFestivalCouplets } from '~/packages/ai/src'
+import { acceptHMRUpdate, defineStore } from 'pinia'
 
 const ns = 'ai-sfc'
 

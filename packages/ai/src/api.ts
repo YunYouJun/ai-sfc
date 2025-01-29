@@ -1,9 +1,9 @@
-import consola from 'consola'
 import type OpenAI from 'openai'
-import { baseChatCompletionCreateParams, baseModel, openai } from './config'
-
+import consola from 'consola'
 // TODO: pass params
 import { config } from '~/config'
+
+import { baseChatCompletionCreateParams, baseModel, openai } from './config'
 
 export async function getCompletion(msg: string) {
   const chatCompletion = await openai.chat.completions.create({
@@ -59,5 +59,5 @@ export async function getCouplets(prompt: string) {
   })
 
   consola.debug(chatCompletion)
-  return chatCompletion.choices[0].message
+  return chatCompletion.choices[0]?.message
 }

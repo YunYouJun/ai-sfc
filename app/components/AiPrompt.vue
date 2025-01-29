@@ -17,14 +17,15 @@ async function generate() {
   const data = await apiGenerate({
     prompt: app.prompt,
   })
-  app.setCoupletsData(data)
+  if (data)
+    app.setCoupletsData(data)
 
   app.loading = false
 }
 
 // Ctrl + Enter / Cmd + Enter to generate
 const { Ctrl_enter, Cmd_enter } = useMagicKeys()
-watch(() => [Cmd_enter.value, Ctrl_enter.value], (v) => {
+watch(() => [Cmd_enter?.value, Ctrl_enter?.value], (v) => {
   if (v)
     generate()
 })

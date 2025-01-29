@@ -1,9 +1,12 @@
-import type { SprintFestivalCouplets } from '~/packages/ai/src'
-import { getCouplets } from '~/packages/ai/src'
+import type { SprintFestivalCouplets } from '~~/packages/ai/src'
+import { getCouplets } from '~~/packages/ai/src'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const data = await getCouplets(query.prompt as string)
+  if (!data)
+    return
+
   const { content } = data
 
   let unWrapperContent = content || ''

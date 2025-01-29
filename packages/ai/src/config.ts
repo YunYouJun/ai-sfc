@@ -1,6 +1,6 @@
-import 'dotenv/config'
 import process from 'node:process'
 import OpenAI from 'openai'
+import 'dotenv/config'
 
 const deepseekApiUrl = 'https://api.deepseek.com/v1'
 

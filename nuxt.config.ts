@@ -1,11 +1,10 @@
-import { pwa } from './config/pwa'
-import { appDescription } from './constants/index'
+import { pwa } from './app/config/pwa'
+import { appDescription } from './app/constants/index'
 
 // add build time to env
 import.meta.env.VITE_APP_BUILD_TIME = new Date().getTime().toString()
 
 export default defineNuxtConfig({
-  ssr: false,
 
   modules: [
     '@vueuse/nuxt',
@@ -13,39 +12,12 @@ export default defineNuxtConfig({
     '@pinia/nuxt',
     '@nuxtjs/color-mode',
     '@vite-pwa/nuxt',
-    'nuxt-module-eslint-config',
+    '@nuxt/eslint',
   ],
+  ssr: false,
 
-  experimental: {
-    // when using generate, payload js assets included in sw precache manifest
-    // but missing on offline, disabling extraction it until fixed
-    payloadExtraction: false,
-    // renderJsonPayloads: true,
-    // https://github.com/nuxt/nuxt/issues/24229
-    appManifest: false,
-    typedPages: true,
-  },
-
-  css: [
-    '@unocss/reset/tailwind.css',
-    '~/styles/index.scss',
-  ],
-
-  colorMode: {
-    classSuffix: '',
-  },
-
-  nitro: {
-    esbuild: {
-      options: {
-        target: 'esnext',
-      },
-    },
-    prerender: {
-      crawlLinks: false,
-      routes: ['/'],
-      ignore: ['/hi'],
-    },
+  devtools: {
+    enabled: true,
   },
 
   app: {
@@ -83,20 +55,10 @@ export default defineNuxtConfig({
     },
   },
 
-  pwa,
-
-  devtools: {
-    enabled: true,
-  },
-
-  features: {
-    // For UnoCSS
-    inlineStyles: false,
-  },
-
-  eslintConfig: {
-    setup: false,
-  },
+  css: [
+    '@unocss/reset/tailwind.css',
+    '~/styles/index.scss',
+  ],
 
   vue: {
     compilerOptions: {
@@ -105,4 +67,46 @@ export default defineNuxtConfig({
       },
     },
   },
+
+  colorMode: {
+    classSuffix: '',
+  },
+
+  future: {
+    compatibilityVersion: 4,
+  },
+
+  experimental: {
+    // when using generate, payload js assets included in sw precache manifest
+    // but missing on offline, disabling extraction it until fixed
+    payloadExtraction: false,
+    renderJsonPayloads: true,
+    typedPages: true,
+  },
+
+  compatibilityDate: '2024-08-14',
+
+  nitro: {
+    esbuild: {
+      options: {
+        target: 'esnext',
+      },
+    },
+    prerender: {
+      crawlLinks: false,
+      routes: ['/'],
+      ignore: ['/hi'],
+    },
+  },
+
+  eslint: {
+    config: {
+      standalone: false,
+      nuxt: {
+        sortConfigKeys: true,
+      },
+    },
+  },
+
+  pwa,
 })

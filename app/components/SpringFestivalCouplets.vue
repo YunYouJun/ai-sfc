@@ -1,12 +1,12 @@
 <script lang="ts" setup>
-import { toBlob, toPng } from 'html-to-image'
-import { downloadDataUrlAsImage } from '@yunlefun/utils'
-import { SwitchRoot, SwitchThumb } from 'radix-vue'
-import { copyBlobToClipboard } from 'copy-image-clipboard'
+import type { SprintFestivalCouplets } from '~~/packages/ai/src'
 import { useClipboard } from '@vueuse/core'
+import { downloadDataUrlAsImage } from '@yunlefun/utils'
+import { copyBlobToClipboard } from 'copy-image-clipboard'
+import { toBlob, toPng } from 'html-to-image'
+import { SwitchRoot, SwitchThumb } from 'radix-vue'
+import pkg from '~~/package.json'
 import { suggestedCoupletsFilename } from '~/config'
-import type { SprintFestivalCouplets } from '~/packages/ai/src'
-import pkg from '~/package.json'
 
 defineProps<{
   coupletsData: SprintFestivalCouplets
@@ -14,7 +14,7 @@ defineProps<{
 
 const app = useAppStore()
 
-const sfcContainer = ref<HTMLElement | null>(null)
+const sfcContainer = ref<HTMLElement>()
 
 /**
  * Download image
