@@ -29,6 +29,12 @@ pnpm i
 pnpm dev
 ```
 
+## Functions
+
+### EdgeOne Functions
+
+[Pages Functions](https://edgeone.cloud.tencent.com/document/162936866445025280)
+
 ## FAQ
 
 - [Error when opening nuxt3 web link in China's QQ application](https://github.com/nuxt/nuxt/issues/24229)

@@ -2,7 +2,7 @@ import { pwa } from './app/config/pwa'
 import { appDescription } from './app/constants/index'
 
 // add build time to env
-import.meta.env.VITE_APP_BUILD_TIME = new Date().getTime().toString()
+import.meta.env.VITE_APP_BUILD_TIME = Date.now().toString()
 
 export default defineNuxtConfig({
 
@@ -70,6 +70,12 @@ export default defineNuxtConfig({
 
   colorMode: {
     classSuffix: '',
+  },
+
+  runtimeConfig: {
+    public: {
+      yunleSsoOrigin: 'https://www.yunle.fun',
+    },
   },
 
   future: {
