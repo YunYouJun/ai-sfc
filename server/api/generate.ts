@@ -8,6 +8,7 @@ import {
   readProviderString,
 } from '../../app/utils/ai-provider'
 import { getCoupletDataByPrompt } from '../../packages/server'
+import { runPaidGeneration } from '../../packages/server/billing'
 import { callAccountApi, generateCoupletsViaCloudbase, getCloudbaseApp } from '../../packages/server/cloudbase'
 import { readBearerToken, verifyCloudBaseToken } from '../../packages/server/identity'
 
@@ -51,78 +52,45 @@ function isCloudbaseConfigured(cb: CloudbaseRuntime) {
   return !!(cb.envId && cb.secretId && cb.secretKey && cb.internalToken)
 }
 
-/** 登录扣费：鉴权 → 预扣云币 → CloudBase 内置大模型生成 → 失败退款 */
+/** 登录扣费：鉴权 → 预扣云币 → CloudBase 大模型生成 → 失败退款（编排在 runPaidGeneration，便于单测） */
 async function generatePaid(event: H3Event, prompt: string, bizId: string, cb: CloudbaseRuntime) {
-  const token = readBearerToken(event)
-  if (!token) {
-    throw createError({
-      statusCode: 401,
-      statusMessage: 'Login required',
-      message: '请先登录后再生成。',
-    })
-  }
-
-  const user = await verifyCloudBaseToken(cb.envId, token)
-  if (!user) {
-    throw createError({
-      statusCode: 401,
-      statusMessage: 'Invalid session',
-      message: '登录态已失效，请重新登录。',
-    })
-  }
-
   const app = getCloudbaseApp(cb)
-  const effectiveBizId = bizId || `gen-${user.id}-${Date.now()}`
+  const effectiveBizId = bizId || globalThis.crypto.randomUUID()
 
-  // 预扣（bizId 幂等，同一 bizId 只扣一次）
-  let balance: number
-  try {
-    const res = await callAccountApi<{ balance: number, deduped: boolean }>(app, 'deductCoinForUser', {
-      serviceToken: cb.internalToken,
-      userId: user.id,
-      appId: APP_ID,
-      amount: cb.cost,
-      bizId: effectiveBizId,
-    })
-    balance = res.balance
-  }
-  catch (error) {
+  const result = await runPaidGeneration(
+    { token: readBearerToken(event), prompt, bizId: effectiveBizId, cost: cb.cost },
+    {
+      verifyToken: token => verifyCloudBaseToken(cb.envId, token),
+      deduct: ({ userId, amount, bizId: id }) => callAccountApi<{ balance: number, deduped: boolean }>(app, 'deductCoinForUser', {
+        serviceToken: cb.internalToken,
+        userId,
+        appId: APP_ID,
+        amount,
+        bizId: id,
+      }),
+      refund: async ({ userId, amount, refId }) => {
+        await callAccountApi(app, 'adminAdjustCoin', {
+          serviceToken: cb.internalToken,
+          userId,
+          appId: APP_ID,
+          amount,
+          refId,
+          reason: 'generate-failed',
+          operator: APP_ID,
+        })
+      },
+      generate: input => generateCoupletsViaCloudbase(app, input, cb.modelGroup, cb.model),
+    },
+  )
+
+  if (!result.ok) {
     throw createError({
-      statusCode: 402,
-      statusMessage: 'Insufficient balance',
-      message: readGenerateError(error),
+      statusCode: result.statusCode,
+      message: result.message,
     })
   }
 
-  // 生成
-  let coupletData
-  try {
-    coupletData = await generateCoupletsViaCloudbase(app, prompt, cb.modelGroup, cb.model)
-  }
-  catch (error) {
-    console.error('[api/generate] cloudbase model failed:', readGenerateError(error))
-  }
-
-  if (!coupletData) {
-    // 生成失败 → 退款（refId=bizId 幂等入账）
-    await callAccountApi(app, 'adminAdjustCoin', {
-      serviceToken: cb.internalToken,
-      userId: user.id,
-      appId: APP_ID,
-      amount: cb.cost,
-      refId: effectiveBizId,
-      reason: 'generate-failed',
-      operator: APP_ID,
-    }).catch(() => {})
-
-    throw createError({
-      statusCode: 502,
-      statusMessage: 'Model request failed',
-      message: '模型生成失败，已退回云币，请重试。',
-    })
-  }
-
-  return { ...coupletData, balance }
+  return { ...result.couplets, balance: result.balance }
 }
 
 /** 降级：未配置 CloudBase 时回退到服务端 env key（不鉴权、不扣费） */
