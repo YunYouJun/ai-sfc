@@ -73,6 +73,17 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    // 登录扣云币（复用 yunle CloudBase 账户体系）；留空则 /api/generate 回退 DeepSeek 现状
+    accountApiInternalToken: '',
+    cloudbaseEnvId: 'yunlefun-8g7ybcxc7345c490',
+    cloudbaseModel: 'deepseek-v4-flash',
+    cloudbaseModelGroup: 'custom-deepseek-open',
+    costPerGeneration: 1,
+    openaiApiKey: '',
+    openaiBaseURL: 'https://api.deepseek.com/v1',
+    openaiModel: 'deepseek-chat',
+    tencentApiSecretId: '',
+    tencentApiSecretKey: '',
     public: {
       yunleSsoOrigin: 'https://www.yunle.fun',
     },

@@ -1,9 +1,17 @@
 <script lang="ts" setup>
 import { useMagicKeys } from '@vueuse/core'
 import { config } from '~/config'
-import { apiGenerate } from '~/utils'
+import { apiGenerate, generateCoupletsDirect } from '~/utils'
 
 const app = useAppStore()
+const aiSettings = useAiSettingsStore()
+const userStore = useUserStore()
+const wallet = useWalletStore()
+
+/** 未登录且未配置自定义 token：既不能走服务端云币，也不能浏览器直连 */
+const needsSetup = computed(() => !userStore.isAuthenticated && !aiSettings.hasToken)
+/** 登录且余额已知时展示剩余可生成次数 */
+const showRemaining = computed(() => userStore.isAuthenticated && wallet.remaining !== null)
 
 const promptPresets = [
   '家人平安，事业顺遂',
@@ -23,16 +31,39 @@ function usePreset(preset: string) {
  * not use ofetch see https://github.com/unjs/ofetch/issues/294
  */
 async function generate() {
-  if (!canGenerate.value)
+  if (app.loading || app.prompt.trim().length === 0)
     return
+
+  // 未登录且未配置 token：引导去设置页填 token（或右上角登录用云币）
+  if (needsSetup.value) {
+    await navigateTo('/settings')
+    return
+  }
+
+  // 登录但云币已用尽：引导去充值
+  if (userStore.isAuthenticated && wallet.remaining === 0) {
+    window.open(userStore.getYunleUrl('/wallet?from=ai-sfc'), '_blank', 'noopener')
+    return
+  }
 
   app.loading = true
   try {
-    const data = await apiGenerate({
-      prompt: app.prompt,
-    })
-    if (data)
+    if (userStore.isAuthenticated) {
+      // 登录 → 服务端用云币生成（token 仅作鉴权，模型 key 在服务端）
+      const data = await apiGenerate({
+        prompt: app.prompt,
+        token: userStore.getAccessToken(),
+        bizId: crypto.randomUUID(),
+      })
+      if (typeof data.balance === 'number')
+        wallet.setBalance(data.balance)
       await app.setCoupletsData(data)
+    }
+    else {
+      // 未登录但有 token → 浏览器直连，token 不经过服务端
+      const data = await generateCoupletsDirect(app.prompt, aiSettings.resolvedProvider)
+      await app.setCoupletsData(data)
+    }
   }
   finally {
     app.loading = false
@@ -68,11 +99,24 @@ watch(() => [Cmd_enter?.value, Ctrl_enter?.value], ([cmdEnter, ctrlEnter]) => {
       placeholder="想要什么样的春联？"
       class="prompt-input"
       :maxlength="config.inputMaxLength"
-      rows="7"
+      rows="3"
     />
 
+    <div v-if="needsSetup" class="setup-notice">
+      <span class="i-ri-information-line" />
+      <span>
+        未登录：请先<NuxtLink to="/settings">填写模型 Token</NuxtLink> 直连生成，或点击右上角登录使用云币。
+      </span>
+    </div>
+
     <div class="composer-footer">
-      <span class="counter">{{ promptLength }}/{{ config.inputMaxLength }}</span>
+      <div class="composer-meta">
+        <span class="counter">{{ promptLength }}/{{ config.inputMaxLength }}</span>
+        <span v-if="showRemaining" class="balance-hint">
+          <span class="i-ri-copper-coin-line" />
+          <span>剩余 {{ wallet.remaining }} 次</span>
+        </span>
+      </div>
       <button
         type="button"
         class="generate-button font-zmx"
@@ -123,7 +167,6 @@ watch(() => [Cmd_enter?.value, Ctrl_enter?.value], ([cmdEnter, ctrlEnter]) => {
 
 .prompt-input {
   width: 100%;
-  min-height: 13rem;
   resize: vertical;
   flex: 1;
   padding: 1rem;
@@ -148,6 +191,35 @@ watch(() => [Cmd_enter?.value, Ctrl_enter?.value], ([cmdEnter, ctrlEnter]) => {
   color: rgba(53, 20, 15, 0.42);
 }
 
+.setup-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid rgba(179, 38, 30, 0.2);
+  border-radius: 8px;
+  background: rgba(179, 38, 30, 0.06);
+  color: #a9231b;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.setup-notice span:first-child {
+  flex: 0 0 auto;
+  margin-top: 0.1rem;
+}
+
+.setup-notice a {
+  font-weight: 800;
+  text-decoration: underline;
+}
+
+.dark .setup-notice {
+  border-color: rgba(255, 155, 142, 0.22);
+  background: rgba(255, 155, 142, 0.08);
+  color: #ff9b8e;
+}
+
 .composer-footer {
   display: flex;
   align-items: center;
@@ -155,10 +227,29 @@ watch(() => [Cmd_enter?.value, Ctrl_enter?.value], ([cmdEnter, ctrlEnter]) => {
   gap: 1rem;
 }
 
+.composer-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
 .counter {
   color: rgba(53, 20, 15, 0.54);
   font-size: 0.85rem;
   font-weight: 800;
+}
+
+.balance-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #0f6b56;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.dark .balance-hint {
+  color: #69d3ad;
 }
 
 .generate-button {

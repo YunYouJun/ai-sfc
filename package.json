@@ -22,6 +22,7 @@
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
+    "@cloudbase/node-sdk": "^3.18.1",
     "ofetch": "1.5.1",
     "wc-github-corners": "^0.1.6"
   },
@@ -46,7 +47,7 @@
     "html-to-image": "^1.11.13",
     "nuxt": "^4.4.8",
     "pinia": "^3.0.4",
-    "radix-vue": "^1.9.17",
+    "reka-ui": "2.9.10",
     "sass": "^1.101.0",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",

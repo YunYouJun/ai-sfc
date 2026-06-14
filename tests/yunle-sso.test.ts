@@ -4,6 +4,7 @@ import {
   defaultYunleSsoOrigin,
   isExpectedYunleSsoMessage,
   mapYunleSsoSession,
+  readSsoAccessToken,
   trimTrailingSlash,
 } from '../app/utils/yunle-sso'
 
@@ -87,5 +88,11 @@ describe('yunle sso helpers', () => {
 
   it('应该去除 SSO origin 末尾斜杠', () => {
     expect(trimTrailingSlash('https://www.yunle.fun///')).toBe('https://www.yunle.fun')
+  })
+
+  it('应该从 CloudBase session 读取 access_token', () => {
+    expect(readSsoAccessToken({ access_token: 'tok_123' })).toBe('tok_123')
+    expect(readSsoAccessToken({})).toBe('')
+    expect(readSsoAccessToken(undefined)).toBe('')
   })
 })

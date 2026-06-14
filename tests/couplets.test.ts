@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { buildCoupletMessages, coupletSystemPrompt } from '../packages/ai/src/couplets'
+// 从 server 子包导入以同时验证向后兼容的 re-export 仍然可用
 import { extractJsonObject, parseCoupletContent } from '../packages/server/couplets'
 
 describe('couplet response parsing', () => {
@@ -36,5 +38,24 @@ describe('couplet response parsing', () => {
 
   it('应该在 JSON 格式错误时抛出解析错误', () => {
     expect(() => parseCoupletContent('{"上联":"春来",}')).toThrow()
+  })
+})
+
+describe('buildCoupletMessages', () => {
+  it('空输入也总是包含系统提示词', () => {
+    const messages = buildCoupletMessages('')
+    expect(messages).toHaveLength(1)
+    expect(messages[0]).toEqual({ role: 'system', content: coupletSystemPrompt })
+  })
+
+  it('有提示词时追加 user 消息并去除首尾空白', () => {
+    const messages = buildCoupletMessages('  家人平安  ')
+    expect(messages).toHaveLength(2)
+    expect(messages[1]).toEqual({ role: 'user', content: '我的提示是：家人平安' })
+  })
+
+  it('按 maxLength 截断输入', () => {
+    const messages = buildCoupletMessages('一二三四五', 3)
+    expect(messages[1]?.content).toBe('我的提示是：一二三')
   })
 })

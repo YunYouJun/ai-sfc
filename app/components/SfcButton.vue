@@ -25,7 +25,11 @@ defineProps<{
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.68);
   color: #35140f;
-  font-weight: 900;
+  font-family: inherit;
+  font-size: 1.08rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1;
   transition:
     transform 0.16s ease,
     border-color 0.16s ease,

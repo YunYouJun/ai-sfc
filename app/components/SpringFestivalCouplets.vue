@@ -4,16 +4,19 @@ import { useClipboard } from '@vueuse/core'
 import { downloadDataUrlAsImage } from '@yunlefun/utils'
 import { copyBlobToClipboard } from 'copy-image-clipboard'
 import { toBlob, toPng } from 'html-to-image'
-import { SwitchRoot, SwitchThumb } from 'radix-vue'
+import { SwitchRoot, SwitchThumb } from 'reka-ui'
 import pkg from '~~/package.json'
 import { suggestedCoupletsFilename } from '~/config'
 
-defineProps<{
+const props = defineProps<{
   coupletsData: SprintFestivalCouplets
 }>()
 
 const app = useAppStore()
 const sfcContainer = useTemplateRef<HTMLElement>('sfcContainer')
+
+const upperCoupletChars = computed(() => [...props.coupletsData['上联']])
+const lowerCoupletChars = computed(() => [...props.coupletsData['下联']])
 
 /**
  * Download image
@@ -112,79 +115,103 @@ async function copyText() {
   <div class="couplet-workspace">
     <div
       id="spring-festival-container"
-      ref="sfcContainer"
       class="font-zmx spring-festival-container"
+      :data-couplet-style="app.options.style"
     >
-      <div
-        class="spring-festival-plaque"
-        :class="{
-          rtl: !app.options.inverseCouplets,
-        }"
-      >
-        <Transition name="fade" mode="out-in">
-          <span v-if="app.visible">{{ coupletsData['横批'] }}</span>
-        </Transition>
-      </div>
-
-      <div
-        class="spring-festival-row"
-        :class="{
-          'is-reversed': !app.options.inverseCouplets,
-        }"
-      >
-        <div class="spring-festival-couplet">
+      <div ref="sfcContainer" class="spring-festival-content">
+        <div
+          class="spring-festival-plaque"
+          :class="{
+            rtl: !app.options.inverseCouplets,
+          }"
+        >
           <Transition name="fade" mode="out-in">
-            <span v-if="app.visible">{{ coupletsData['上联'] }}</span>
+            <span v-if="app.visible">{{ coupletsData['横批'] }}</span>
           </Transition>
         </div>
 
         <div
-          class="spring-festival-fu-container"
+          class="spring-festival-row"
           :class="{
-            'rotate-180': app.options.inverseFu,
+            'is-reversed': !app.options.inverseCouplets,
           }"
         >
-          <div class="spring-festival-fu" />
-          <span class="fu-char">
+          <div class="spring-festival-couplet">
             <Transition name="fade" mode="out-in">
-              <span v-if="app.visible && coupletsData['总结']">{{ coupletsData['总结'].slice(0, 1) }}</span>
+              <span
+                v-if="app.visible"
+                class="couplet-text"
+                :aria-label="coupletsData['上联']"
+              >
+                <span
+                  v-for="(char, index) in upperCoupletChars"
+                  :key="`upper-${index}-${char}`"
+                  class="couplet-char"
+                  aria-hidden="true"
+                >{{ char }}</span>
+              </span>
             </Transition>
-          </span>
-        </div>
+          </div>
 
-        <div class="spring-festival-couplet">
-          <Transition name="fade" mode="out-in">
-            <span v-if="app.visible">{{ coupletsData['下联'] }}</span>
-          </Transition>
+          <div
+            class="spring-festival-fu-container"
+            :class="{
+              'rotate-180': app.options.inverseFu,
+            }"
+          >
+            <div class="spring-festival-fu" />
+            <span class="fu-char">
+              <Transition name="fade" mode="out-in">
+                <span v-if="app.visible && coupletsData['总结']">{{ coupletsData['总结'].slice(0, 1) }}</span>
+              </Transition>
+            </span>
+          </div>
+
+          <div class="spring-festival-couplet">
+            <Transition name="fade" mode="out-in">
+              <span
+                v-if="app.visible"
+                class="couplet-text"
+                :aria-label="coupletsData['下联']"
+              >
+                <span
+                  v-for="(char, index) in lowerCoupletChars"
+                  :key="`lower-${index}-${char}`"
+                  class="couplet-char"
+                  aria-hidden="true"
+                >{{ char }}</span>
+              </span>
+            </Transition>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="switch-grid">
-      <label class="switch-row" for="inverse-fu">
-        <span>倒转福字</span>
+    <div class="font-zmx switch-grid">
+      <div class="switch-row">
+        <label class="switch-label" for="inverse-fu">倒转福字</label>
         <SwitchRoot
           id="inverse-fu"
-          v-model:checked="app.options.inverseFu"
+          v-model="app.options.inverseFu"
           class="switch-root"
         >
           <SwitchThumb class="switch-thumb" />
         </SwitchRoot>
-      </label>
+      </div>
 
-      <label class="switch-row" for="inverse-couplets">
-        <span>翻转春联</span>
+      <div class="switch-row">
+        <label class="switch-label" for="inverse-couplets">翻转春联</label>
         <SwitchRoot
           id="inverse-couplets"
-          v-model:checked="app.options.inverseCouplets"
+          v-model="app.options.inverseCouplets"
           class="switch-root"
         >
           <SwitchThumb class="switch-thumb" />
         </SwitchRoot>
-      </label>
+      </div>
     </div>
 
-    <div class="action-grid">
+    <div class="font-zmx action-grid">
       <SfcButton icon="i-ri-download-line" @click="download">
         下载图片
       </SfcButton>
@@ -211,25 +238,38 @@ async function copyText() {
 .spring-festival-container {
   --ac-fu-font-size: 5rem;
   --ac-couplet-width: 4.6rem;
-  --ac-paper: #f8d88f;
+  --ac-couplet-font-size: 2.45rem;
+  --ac-couplet-line-height: 1.18;
+
+  /* 春联皮肤变量（默认＝经典手写款），由下方 [data-couplet-style] 覆盖 */
+  --sfc-couplet-bg: #c1121f;
+  --sfc-fu-bg: #c1121f;
+  --sfc-couplet-ink: #1a1a1a;
+  --sfc-plaque-ink: #1a1a1a;
+  --sfc-fu-ink: #1a1a1a;
+  --sfc-couplet-border: transparent;
+  --sfc-couplet-radius: 0;
+  --sfc-couplet-inset: none;
+  --sfc-couplet-pattern: none;
 
   width: min(100%, 35rem);
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
   align-items: center;
   margin: 0 auto;
-  padding: 1.1rem;
-  border: 1px solid rgba(126, 36, 23, 0.16);
-  border-radius: 8px;
-  background:
-    linear-gradient(90deg, rgba(126, 36, 23, 0.07) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(126, 36, 23, 0.07) 1px, transparent 1px), var(--ac-paper);
-  background-size:
-    18px 18px,
-    18px 18px,
-    auto;
-  box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.16);
+}
+
+/**
+ * The actual couplet content (横批 + 上下联 + 福). This is the element captured
+ * for download/copy, so it deliberately has no background or padding — the image
+ * comes out transparent and sized exactly to the couplets, while the paper frame
+ * above stays for on-screen display only.
+ */
+.spring-festival-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  align-items: center;
 }
 
 .rtl {
@@ -244,10 +284,12 @@ async function copyText() {
   align-items: center;
   justify-content: center;
   padding: 0.4rem 0.75rem;
-  border: 1px solid rgba(255, 225, 143, 0.5);
-  border-radius: 6px;
-  background: #c61919;
-  color: #111;
+  border: 1px solid var(--sfc-couplet-border);
+  border-radius: var(--sfc-couplet-radius);
+  background-color: var(--sfc-couplet-bg);
+  background-image: var(--sfc-couplet-pattern);
+  box-shadow: var(--sfc-couplet-inset);
+  color: var(--sfc-plaque-ink);
   font-size: 2.5rem;
   line-height: 1.1;
   letter-spacing: 0;
@@ -274,10 +316,11 @@ async function copyText() {
   position: relative;
   width: var(--ac-fu-font-size);
   height: var(--ac-fu-font-size);
+  justify-self: center;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #111;
+  color: var(--sfc-fu-ink);
   font-size: calc(var(--ac-fu-font-size) - 0.6rem);
   transition: transform 0.32s ease;
 }
@@ -285,9 +328,10 @@ async function copyText() {
 .spring-festival-fu {
   position: absolute;
   inset: 0;
-  transform: rotate(45deg) scale(0.82);
-  border: 1px solid rgba(255, 225, 143, 0.5);
-  background: #c61919;
+  transform: rotate(45deg) scale(1);
+  border: 1px solid var(--sfc-couplet-border);
+  background-color: var(--sfc-fu-bg);
+  box-shadow: var(--sfc-couplet-inset);
 }
 
 .fu-char {
@@ -298,22 +342,35 @@ async function copyText() {
 
 .spring-festival-couplet {
   min-width: var(--ac-couplet-width);
-  min-height: 19rem;
+  min-height: 20.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1.2rem 0.45rem;
-  border: 1px solid rgba(255, 225, 143, 0.5);
-  border-radius: 6px;
-  background: #c61919;
-  color: #111;
-  font-size: 2.45rem;
-  line-height: 1.42;
+  padding: 1.25rem 0.45rem;
+  border: 1px solid var(--sfc-couplet-border);
+  border-radius: var(--sfc-couplet-radius);
+  background-color: var(--sfc-couplet-bg);
+  background-image: var(--sfc-couplet-pattern);
+  box-shadow: var(--sfc-couplet-inset);
+  color: var(--sfc-couplet-ink);
+  font-size: var(--ac-couplet-font-size);
+  line-height: var(--ac-couplet-line-height);
   letter-spacing: 0;
   text-align: center;
-  text-orientation: upright;
   white-space: normal;
-  writing-mode: vertical-lr;
+}
+
+.couplet-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: var(--ac-couplet-line-height);
+}
+
+.couplet-char {
+  display: block;
+  line-height: var(--ac-couplet-line-height);
 }
 
 .switch-grid,
@@ -327,59 +384,107 @@ async function copyText() {
 }
 
 .switch-row {
-  min-height: 2.75rem;
+  min-height: 3rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: 0.45rem 0.65rem;
+  padding: 0.5rem 0.65rem 0.5rem 0.85rem;
   border: 1px solid rgba(126, 36, 23, 0.12);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.5);
   color: #35140f;
-  font-weight: 800;
+  font-size: 1.15rem;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.switch-label {
+  min-width: 0;
+  line-height: 1;
+  cursor: pointer;
 }
 
 .switch-root {
   position: relative;
-  width: 2.75rem;
-  height: 1.45rem;
+  width: 3rem;
+  height: 1.55rem;
   flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem;
+  border: 0;
   border-radius: 999px;
-  background: rgba(179, 38, 30, 0.86);
-  box-shadow: inset 0 0 0 1px rgba(126, 36, 23, 0.14);
+  appearance: none;
+  background: rgba(126, 36, 23, 0.22);
+  box-shadow:
+    inset 0 0 0 1px rgba(126, 36, 23, 0.18),
+    0 1px 3px rgba(53, 20, 15, 0.12);
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    box-shadow 0.16s ease;
 }
 
 .switch-root[data-state='checked'] {
-  background: #0f6b56;
+  background: #b3261e;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 225, 143, 0.28),
+    0 2px 6px rgba(179, 38, 30, 0.22);
+}
+
+.switch-root:hover {
+  box-shadow:
+    inset 0 0 0 1px rgba(126, 36, 23, 0.24),
+    0 2px 8px rgba(53, 20, 15, 0.16);
+}
+
+.switch-root:focus-visible {
+  outline: 2px solid #e5a93d;
+  outline-offset: 2px;
 }
 
 .switch-thumb {
   display: block;
-  width: 1.1rem;
-  height: 1.1rem;
-  margin: 0.175rem;
+  width: 1.15rem;
+  height: 1.15rem;
   border-radius: 999px;
   background: #fff7df;
-  box-shadow: 0 2px 8px rgba(53, 20, 15, 0.26);
+  box-shadow:
+    0 1px 2px rgba(53, 20, 15, 0.18),
+    0 3px 8px rgba(53, 20, 15, 0.18);
+  transform: translateX(0);
   transition: transform 0.16s ease;
   will-change: transform;
 }
 
 .switch-thumb[data-state='checked'] {
-  transform: translateX(1.3rem);
+  transform: translateX(1.45rem);
 }
 
 .action-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.dark .spring-festival-container {
-  --ac-paper: #2a1a18;
-  border-color: rgba(255, 219, 142, 0.16);
-  background:
-    linear-gradient(90deg, rgba(255, 219, 142, 0.05) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(255, 219, 142, 0.05) 1px, transparent 1px), var(--ac-paper);
+/* 洒金宣纸：红底极淡同色暗纹、黑墨字、无边框直角 */
+.spring-festival-container[data-couplet-style='silk'] {
+  --sfc-couplet-bg: #b5121b;
+  --sfc-fu-bg: #b5121b;
+  --sfc-couplet-pattern:
+    repeating-linear-gradient(45deg, rgba(255, 228, 170, 0.07) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(-45deg, rgba(60, 0, 0, 0.06) 0 1px, transparent 1px 7px);
+}
+
+/* 描金喜庆：正红渐变、金色描边内线、金横批/金福、墨色对联 */
+.spring-festival-container[data-couplet-style='festive'] {
+  --sfc-couplet-bg: #a8121a;
+  --sfc-fu-bg: #c5151c;
+  --sfc-couplet-pattern: linear-gradient(180deg, #c8161d, #a8121a);
+  --sfc-couplet-ink: #2a1108;
+  --sfc-plaque-ink: #f2d98a;
+  --sfc-fu-ink: #f2d98a;
+  --sfc-couplet-border: #c99a3a;
+  --sfc-couplet-inset: inset 0 0 0 2px rgba(240, 217, 138, 0.32);
 }
 
 .dark .switch-row {
@@ -388,12 +493,26 @@ async function copyText() {
   color: #fff3d8;
 }
 
+.dark .switch-root {
+  background: rgba(255, 219, 142, 0.22);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 219, 142, 0.14),
+    0 1px 4px rgba(0, 0, 0, 0.22);
+}
+
+.dark .switch-root[data-state='checked'] {
+  background: #d93c32;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 219, 142, 0.24),
+    0 2px 8px rgba(217, 60, 50, 0.2);
+}
+
 @media (max-width: 640px) {
   .spring-festival-container {
     --ac-fu-font-size: 4rem;
     --ac-couplet-width: 3.7rem;
-
-    padding: 0.85rem;
+    --ac-couplet-font-size: 2rem;
+    --ac-couplet-line-height: 1.16;
   }
 
   .spring-festival-plaque {
@@ -407,9 +526,8 @@ async function copyText() {
   }
 
   .spring-festival-couplet {
-    min-height: 16rem;
-    font-size: 2rem;
-    line-height: 1.36;
+    min-height: 17.5rem;
+    padding: 1.35rem 0.4rem;
   }
 
   .switch-grid,

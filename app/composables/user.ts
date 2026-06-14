@@ -6,6 +6,7 @@ import {
   defaultYunleSsoOrigin,
   isExpectedYunleSsoMessage,
   mapYunleSsoSession,
+  readSsoAccessToken,
   readString,
   trimTrailingSlash,
 } from '~/utils/yunle-sso'
@@ -16,6 +17,12 @@ const interactiveTimeout = 120000
 
 type SsoMode = 'silent' | 'interactive'
 type AuthStatus = 'idle' | 'checking' | 'authenticated' | 'anonymous' | 'error'
+
+interface SsoRequest {
+  url: string
+  done: Promise<YunleUser | null>
+  cancel: () => void
+}
 
 function createNonce() {
   if (window.crypto?.randomUUID)
@@ -33,6 +40,7 @@ function createNonce() {
 export const useUserStore = defineStore('user', () => {
   const runtimeConfig = useRuntimeConfig()
   const user = useStorage<YunleUser | null>(`${ns}:yunle-user`, null)
+  const accessToken = useStorage(`${ns}:yunle-token`, '')
   const lastSyncedAt = useStorage(`${ns}:yunle-user-synced-at`, 0)
   const status = shallowRef<AuthStatus>(user.value ? 'authenticated' : 'idle')
   const error = shallowRef('')
@@ -71,13 +79,19 @@ export const useUserStore = defineStore('user', () => {
 
   function clearAuth(nextStatus: AuthStatus = 'idle') {
     user.value = null
+    accessToken.value = ''
     lastSyncedAt.value = 0
     status.value = nextStatus
   }
 
-  async function requestSso(mode: SsoMode) {
-    if (!import.meta.client)
-      return user.value
+  function createSsoRequest(mode: SsoMode): SsoRequest {
+    if (!import.meta.client) {
+      return {
+        url: '',
+        done: Promise.resolve(user.value),
+        cancel: () => {},
+      }
+    }
 
     status.value = 'checking'
     error.value = ''
@@ -85,107 +99,129 @@ export const useUserStore = defineStore('user', () => {
     const nonce = createNonce()
     const url = buildSsoUrl(mode, nonce)
 
-    return await new Promise<YunleUser | null>((resolve) => {
-      let iframe: HTMLIFrameElement | null = null
-      let popup: Window | null = null
-      let popupTimer: number | undefined
-      let settled = false
+    let resolveDone: (nextUser: YunleUser | null) => void = () => {}
+    let settled = false
+    const done = new Promise<YunleUser | null>((resolve) => {
+      resolveDone = resolve
+    })
 
-      const timeout = window.setTimeout(() => {
-        finish(null, mode === 'silent' ? 'anonymous' : 'error', mode === 'silent' ? '' : '云乐坊账号同步超时')
-      }, mode === 'silent' ? silentTimeout : interactiveTimeout)
+    const timeout = window.setTimeout(() => {
+      finish(null, mode === 'silent' ? 'anonymous' : 'error', mode === 'silent' ? '' : '云乐坊账号同步超时')
+    }, mode === 'silent' ? silentTimeout : interactiveTimeout)
 
-      function cleanup() {
-        window.clearTimeout(timeout)
-        if (popupTimer)
-          window.clearInterval(popupTimer)
-        window.removeEventListener('message', onMessage)
-        iframe?.remove()
+    function cleanup() {
+      window.clearTimeout(timeout)
+      window.removeEventListener('message', onMessage)
+    }
+
+    function finish(nextUser: YunleUser | null, nextStatus: AuthStatus, nextError = '', nextToken = '') {
+      if (settled)
+        return
+      settled = true
+      cleanup()
+      if (nextUser) {
+        user.value = nextUser
+        accessToken.value = nextToken
+        lastSyncedAt.value = Date.now()
+        status.value = 'authenticated'
       }
-
-      function finish(nextUser: YunleUser | null, nextStatus: AuthStatus, nextError = '') {
-        if (settled)
-          return
-        settled = true
-        cleanup()
-        if (nextUser) {
-          user.value = nextUser
-          lastSyncedAt.value = Date.now()
-          status.value = 'authenticated'
-        }
-        else if (nextStatus === 'anonymous') {
-          clearAuth('anonymous')
-        }
-        else if (nextStatus === 'error') {
-          status.value = 'error'
-        }
-        else {
-          status.value = nextStatus
-        }
-        error.value = nextError
-        resolve(nextUser)
+      else if (nextStatus === 'anonymous') {
+        clearAuth('anonymous')
       }
-
-      function onMessage(event: MessageEvent<YunleSsoMessage>) {
-        const data = event.data
-        if (!isExpectedYunleSsoMessage({
-          data,
-          eventOrigin: event.origin,
-          expectedNonce: nonce,
-          expectedOrigin: ssoOrigin.value,
-        })) {
-          return
-        }
-
-        if (!data.ok) {
-          const message = data.reason === 'not_authenticated' ? '' : '云乐坊账号同步失败'
-          finish(null, data.reason === 'not_authenticated' ? 'anonymous' : 'error', message)
-          return
-        }
-
-        const nextUser = mapYunleSsoSession(data.session)
-        if (!nextUser) {
-          finish(null, 'error', '云乐坊账号信息不完整')
-          return
-        }
-
-        finish(nextUser, 'authenticated')
+      else if (nextStatus === 'error') {
+        status.value = 'error'
       }
+      else {
+        status.value = nextStatus
+      }
+      error.value = nextError
+      resolveDone(nextUser)
+    }
 
-      window.addEventListener('message', onMessage)
-
-      if (mode === 'silent') {
-        iframe = document.createElement('iframe')
-        iframe.src = url
-        iframe.title = 'YunLeFun SSO'
-        iframe.hidden = true
-        iframe.style.display = 'none'
-        document.body.appendChild(iframe)
+    function onMessage(event: MessageEvent<YunleSsoMessage>) {
+      const data = event.data
+      if (!isExpectedYunleSsoMessage({
+        data,
+        eventOrigin: event.origin,
+        expectedNonce: nonce,
+        expectedOrigin: ssoOrigin.value,
+      })) {
         return
       }
 
+      if (!data.ok) {
+        const message = data.reason === 'not_authenticated' ? '' : '云乐坊账号同步失败'
+        finish(null, data.reason === 'not_authenticated' ? 'anonymous' : 'error', message)
+        return
+      }
+
+      const nextUser = mapYunleSsoSession(data.session)
+      if (!nextUser) {
+        finish(null, 'error', '云乐坊账号信息不完整')
+        return
+      }
+
+      finish(nextUser, 'authenticated', '', readSsoAccessToken(data.session))
+    }
+
+    window.addEventListener('message', onMessage)
+
+    return {
+      url,
+      done,
+      cancel: () => finish(null, user.value ? 'authenticated' : 'idle'),
+    }
+  }
+
+  async function requestSso(mode: SsoMode) {
+    if (!import.meta.client)
+      return user.value
+
+    const request = createSsoRequest(mode)
+
+    if (mode === 'silent') {
+      const iframe = document.createElement('iframe')
+      iframe.src = request.url
+      iframe.title = 'YunLeFun SSO'
+      iframe.hidden = true
+      iframe.style.display = 'none'
+      document.body.appendChild(iframe)
+      request.done.finally(() => iframe.remove())
+      return await request.done
+    }
+
+    return await new Promise<YunleUser | null>((resolve) => {
       const width = 480
       const height = 680
       const left = Math.max(0, window.screenX + (window.outerWidth - width) / 2)
       const top = Math.max(0, window.screenY + (window.outerHeight - height) / 2)
 
-      popup = window.open(
-        url,
+      const popup = window.open(
+        request.url,
         'yunle_sso',
         `width=${width},height=${height},left=${left},top=${top},popup=yes`,
       )
 
       if (!popup) {
-        finish(null, 'error', '浏览器拦截了云乐坊登录窗口')
+        request.cancel()
+        status.value = 'error'
+        error.value = '浏览器拦截了云乐坊登录窗口'
+        resolve(null)
         return
       }
 
       popup.focus()
-      popupTimer = window.setInterval(() => {
+      const popupTimer = window.setInterval(() => {
         if (!popup?.closed)
           return
-        finish(null, user.value ? 'authenticated' : 'idle')
+        window.clearInterval(popupTimer)
+        request.cancel()
       }, 500)
+
+      request.done.finally(() => {
+        window.clearInterval(popupTimer)
+        resolve(user.value)
+      })
     })
   }
 
@@ -211,6 +247,10 @@ export const useUserStore = defineStore('user', () => {
     return await requestSso('interactive')
   }
 
+  function createInteractiveLogin() {
+    return createSsoRequest('interactive')
+  }
+
   async function refresh() {
     return await syncSilently({ force: true })
   }
@@ -218,6 +258,10 @@ export const useUserStore = defineStore('user', () => {
   function logout() {
     clearAuth('idle')
     error.value = ''
+  }
+
+  function getAccessToken() {
+    return accessToken.value
   }
 
   return {
@@ -231,8 +275,10 @@ export const useUserStore = defineStore('user', () => {
     getYunleUrl,
     syncSilently,
     login,
+    createInteractiveLogin,
     refresh,
     logout,
+    getAccessToken,
   }
 })
 

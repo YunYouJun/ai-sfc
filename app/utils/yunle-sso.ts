@@ -18,6 +18,14 @@ export interface YunleSessionUser {
 
 export interface YunleSsoSession {
   user?: YunleSessionUser
+  access_token?: string
+  refresh_token?: string
+  expires_at?: number
+}
+
+/** 从 CloudBase SSO session 取出 access_token（供服务端鉴权使用） */
+export function readSsoAccessToken(session?: YunleSsoSession): string {
+  return readString(session?.access_token)
 }
 
 export interface YunleSsoMessage {

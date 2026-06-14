@@ -2,7 +2,7 @@
   <footer class="base-footer">
     <SimpleCopyright />
     <div class="powered-by">
-      Powered by <a href="https://chat.deepseek.com/" target="_blank" rel="noopener noreferrer">DeepSeek</a>
+      由 <a href="https://www.yunle.fun" target="_blank" rel="noopener noreferrer">云乐坊</a> 提供
     </div>
   </footer>
 </template>

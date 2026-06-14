@@ -4,6 +4,8 @@ import { getCoupletDataByPrompt } from '../../packages/server'
 export async function onRequest({ request, env }: { request: Request, env: Record<string, string> }) {
   createOpenAIInstance({
     apiKey: env.OPENAI_API_KEY,
+    baseURL: env.AI_SERVICE_URL,
+    model: env.MODEL_NAME,
   })
 
   const url = new URL(request.url)

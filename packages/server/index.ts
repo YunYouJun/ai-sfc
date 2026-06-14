@@ -1,11 +1,12 @@
 import type { SprintFestivalCouplets } from '~~/packages/ai/src'
+import type { AiClientConfig } from '~~/packages/ai/src/config'
 import { getCouplets } from '~~/packages/ai/src'
 import { parseCoupletContent } from './couplets'
 
 export { extractJsonObject, parseCoupletContent } from './couplets'
 
-export async function getCoupletDataByPrompt(prompt: string) {
-  const data = await getCouplets(prompt)
+export async function getCoupletDataByPrompt(prompt: string, provider?: AiClientConfig) {
+  const data = await getCouplets(prompt, provider)
   if (!data)
     return
 

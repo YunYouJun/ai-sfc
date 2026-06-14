@@ -1,6 +1,8 @@
 import type { SprintFestivalCouplets } from '~~/packages/ai/src'
+import type { CoupletStyle } from '~/constants/couplet-style'
 import { useStorage } from '@vueuse/core'
 import { acceptHMRUpdate, defineStore } from 'pinia'
+import { DEFAULT_COUPLET_STYLE } from '~/constants/couplet-style'
 
 const ns = 'ai-sfc'
 
@@ -28,7 +30,11 @@ export const useAppStore = defineStore('app', () => {
      * 是否反转福字
      */
     inverseFu: true,
-  })
+    /**
+     * 春联样式预设
+     */
+    style: DEFAULT_COUPLET_STYLE as CoupletStyle,
+  }, undefined, { mergeDefaults: true })
 
   const route = useRoute()
   onMounted(() => {

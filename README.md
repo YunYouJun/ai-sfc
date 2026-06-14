@@ -1,6 +1,8 @@
 # AI SFC (Spring Festival Couplets) - AI 春联
 
-Powered by [DeepSeek 开发平台](https://platform.deepseek.com/).
+Powered by [云乐坊 YunLeFun](https://www.yunle.fun).
+
+> 登录用户的服务端生成走 [EdgeOne Makers Models AI 网关](https://cloud.tencent.com/document/product/1552/132748)；未登录用户可在「设置」自带兼容 OpenAI 协议的模型接口与 token，浏览器直连、不经过本站服务端。
 
 - 字体：[MaShanZheng | Google Fonts](https://fonts.google.com/specimen/Ma+Shan+Zheng)
 
@@ -18,9 +20,14 @@ cp .env.example .env
 
 # .env
 # Use DeepSeek
+NUXT_OPENAI_BASE_URL='https://api.deepseek.com/v1'
+NUXT_OPENAI_MODEL='deepseek-chat'
+# you can get free tokens from https://platform.deepseek.com/
+NUXT_OPENAI_API_KEY=your_deepseek_api_key
+
+# Legacy EdgeOne Functions fallback
 AI_SERVICE_URL='https://api.deepseek.com/v1'
 MODEL_NAME='deepseek-chat'
-# you can get free tokens from https://platform.deepseek.com/
 OPENAI_API_KEY=your_deepseek_api_key
 ```
 

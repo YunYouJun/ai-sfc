@@ -2,16 +2,21 @@
 import type { ClientOptions } from 'openai'
 import OpenAI from 'openai'
 
-const deepseekApiUrl = 'https://api.deepseek.com/v1'
+export const defaultAiServiceUrl = 'https://api.deepseek.com/v1'
+export const defaultBaseModel = 'deepseek-chat'
 
-// const aiServiceUrl = process?.env.AI_SERVICE_URL || deepseekApiUrl
-const aiServiceUrl = deepseekApiUrl
-// export const baseModel = process?.env.MODEL_NAME || 'deepseek-chat'
+export interface AiClientConfig {
+  apiKey?: string
+  baseURL?: string
+  model?: string
+}
 
-// export const openai = new OpenAI({
-//   baseURL: aiServiceUrl,
-//   // apiKey: process?.env.OPENAI_API_KEY, // This is the default and can be omitted
-// })
+export class MissingAiApiKeyError extends Error {
+  constructor() {
+    super('Missing model API token')
+    this.name = 'MissingAiApiKeyError'
+  }
+}
 
 export const baseChatCompletionCreateParams: Partial<OpenAI.ChatCompletionCreateParamsNonStreaming> = {
   max_tokens: 100,
@@ -21,16 +26,63 @@ export const baseChatCompletionCreateParams: Partial<OpenAI.ChatCompletionCreate
   // stream: true
 }
 
-export let openai: OpenAI
-export let baseModel = 'deepseek-chat'
+export let openai: OpenAI | undefined
+export let baseModel = defaultBaseModel
 
-export function createOpenAIInstance(options: ClientOptions) {
-  openai = new OpenAI({
-    baseURL: aiServiceUrl,
-    ...options,
+function readConfigString(value: unknown) {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+export function resolveAiClientConfig(options: AiClientConfig = {}) {
+  const apiKey = readConfigString(options.apiKey)
+  const baseURL = readConfigString(options.baseURL) || defaultAiServiceUrl
+  const model = readConfigString(options.model) || baseModel || defaultBaseModel
+
+  return {
+    apiKey,
+    baseURL,
+    model,
+  }
+}
+
+export function createOpenAIClient(options: AiClientConfig = {}) {
+  const config = resolveAiClientConfig(options)
+
+  if (!config.apiKey)
+    throw new MissingAiApiKeyError()
+
+  return new OpenAI({
+    apiKey: config.apiKey,
+    baseURL: config.baseURL,
   })
 }
 
+export function getOpenAIClient(options?: AiClientConfig) {
+  if (options)
+    return createOpenAIClient(options)
+
+  if (!openai)
+    throw new MissingAiApiKeyError()
+
+  return openai
+}
+
+export function createOpenAIInstance(options: ClientOptions & AiClientConfig) {
+  const config = resolveAiClientConfig(options)
+
+  if (!config.apiKey)
+    throw new MissingAiApiKeyError()
+
+  openai = new OpenAI({
+    ...options,
+    apiKey: config.apiKey,
+    baseURL: config.baseURL,
+  })
+
+  baseModel = config.model
+  return openai
+}
+
 export function setBaseModel(model: string) {
-  baseModel = model
+  baseModel = readConfigString(model) || defaultBaseModel
 }
