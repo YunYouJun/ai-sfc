@@ -22,7 +22,6 @@
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
-    "@cloudbase/node-sdk": "^3.18.1",
     "ofetch": "1.5.1",
     "wc-github-corners": "^0.1.6"
   },

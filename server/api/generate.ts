@@ -9,8 +9,8 @@ import {
 } from '../../app/utils/ai-provider'
 import { getCoupletDataByPrompt } from '../../packages/server'
 import { runPaidGeneration } from '../../packages/server/billing'
-import { callAccountApi, generateCoupletsViaCloudbase, getCloudbaseApp } from '../../packages/server/cloudbase'
-import { readBearerToken, verifyCloudBaseToken } from '../../packages/server/identity'
+import { deductCloudbaseCoin, generateCoupletsViaCloudbase, getCloudbaseBalance } from '../../packages/server/cloudbase'
+import { readBearerToken } from '../../packages/server/identity'
 
 interface GenerateBody {
   prompt?: unknown
@@ -19,9 +19,6 @@ interface GenerateBody {
 
 interface CloudbaseRuntime {
   envId: string
-  secretId: string
-  secretKey: string
-  internalToken: string
   modelGroup: string
   model: string
   cost: number
@@ -39,47 +36,20 @@ function readGenerateError(error: unknown) {
 function readCloudbaseRuntime(runtimeConfig: Record<string, unknown>): CloudbaseRuntime {
   return {
     envId: readProviderString(runtimeConfig.cloudbaseEnvId),
-    secretId: readProviderString(runtimeConfig.tencentApiSecretId),
-    secretKey: readProviderString(runtimeConfig.tencentApiSecretKey),
-    internalToken: readProviderString(runtimeConfig.accountApiInternalToken),
     modelGroup: readProviderString(runtimeConfig.cloudbaseModelGroup) || 'cloudbase',
     model: readProviderString(runtimeConfig.cloudbaseModel) || defaultAiModel,
     cost: Math.max(1, Math.round(Number(runtimeConfig.costPerGeneration) || 1)),
   }
 }
 
-function isCloudbaseConfigured(cb: CloudbaseRuntime) {
-  return !!(cb.envId && cb.secretId && cb.secretKey && cb.internalToken)
-}
-
-/** 登录扣费：鉴权 → 预扣云币 → CloudBase 大模型生成 → 失败退款（编排在 runPaidGeneration，便于单测） */
+/** 登录扣费：用用户 access_token HTTP 直调 CloudBase（查余额→生成→成功后扣，编排见 runPaidGeneration） */
 async function generatePaid(event: H3Event, prompt: string, bizId: string, cb: CloudbaseRuntime) {
-  const app = getCloudbaseApp(cb)
-  const effectiveBizId = bizId || globalThis.crypto.randomUUID()
-
   const result = await runPaidGeneration(
-    { token: readBearerToken(event), prompt, bizId: effectiveBizId, cost: cb.cost },
+    { token: readBearerToken(event), prompt, bizId: bizId || globalThis.crypto.randomUUID(), cost: cb.cost },
     {
-      verifyToken: token => verifyCloudBaseToken(cb.envId, token),
-      deduct: ({ userId, amount, bizId: id }) => callAccountApi<{ balance: number, deduped: boolean }>(app, 'deductCoinForUser', {
-        serviceToken: cb.internalToken,
-        userId,
-        appId: APP_ID,
-        amount,
-        bizId: id,
-      }),
-      refund: async ({ userId, amount, refId }) => {
-        await callAccountApi(app, 'adminAdjustCoin', {
-          serviceToken: cb.internalToken,
-          userId,
-          appId: APP_ID,
-          amount,
-          refId,
-          reason: 'generate-failed',
-          operator: APP_ID,
-        })
-      },
-      generate: input => generateCoupletsViaCloudbase(app, input, cb.modelGroup, cb.model),
+      getBalance: token => getCloudbaseBalance(cb.envId, token),
+      generate: (token, input) => generateCoupletsViaCloudbase(cb.envId, token, cb.modelGroup, cb.model, input),
+      deduct: (token, { amount, bizId: id }) => deductCloudbaseCoin(cb.envId, token, { appId: APP_ID, amount, bizId: id }),
     },
   )
 
@@ -93,7 +63,7 @@ async function generatePaid(event: H3Event, prompt: string, bizId: string, cb: C
   return { ...result.couplets, balance: result.balance }
 }
 
-/** 降级：未配置 CloudBase 时回退到服务端 env key（不鉴权、不扣费） */
+/** 降级：未配 CloudBase envId 时回退到服务端 env key（不鉴权、不扣费） */
 async function generateFallback(prompt: string, runtimeConfig: Record<string, unknown>) {
   const provider = {
     apiKey: readProviderString(runtimeConfig.openaiApiKey) || readProviderString(process.env.OPENAI_API_KEY),
@@ -149,8 +119,8 @@ export default defineEventHandler(async (event) => {
   const runtimeConfig = useRuntimeConfig(event) as Record<string, unknown>
   const cloudbase = readCloudbaseRuntime(runtimeConfig)
 
-  // 配齐 CloudBase → 走登录扣费；否则降级到当前 DeepSeek 行为
-  if (isCloudbaseConfigured(cloudbase))
+  // 配了 CloudBase envId → 登录扣费链路（用用户 token）；否则降级 DeepSeek（本地未配时仍可跑）
+  if (cloudbase.envId)
     return await generatePaid(event, prompt, readProviderString(body.bizId), cloudbase)
 
   return await generateFallback(prompt, runtimeConfig)
