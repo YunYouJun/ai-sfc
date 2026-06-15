@@ -34,8 +34,9 @@ function readGenerateError(error: unknown) {
 }
 
 function readCloudbaseRuntime(runtimeConfig: Record<string, unknown>): CloudbaseRuntime {
+  const pub = (runtimeConfig.public ?? {}) as Record<string, unknown>
   return {
-    envId: readProviderString(runtimeConfig.cloudbaseEnvId),
+    envId: readProviderString(pub.cloudbaseEnvId),
     modelGroup: readProviderString(runtimeConfig.cloudbaseModelGroup) || 'cloudbase',
     model: readProviderString(runtimeConfig.cloudbaseModel) || defaultAiModel,
     cost: Math.max(1, Math.round(Number(runtimeConfig.costPerGeneration) || 1)),

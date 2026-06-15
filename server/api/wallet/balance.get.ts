@@ -4,7 +4,8 @@ import { readBearerToken } from '../../../packages/server/identity'
 
 export default defineEventHandler(async (event) => {
   const runtimeConfig = useRuntimeConfig(event) as Record<string, unknown>
-  const envId = readProviderString(runtimeConfig.cloudbaseEnvId)
+  const pub = (runtimeConfig.public ?? {}) as Record<string, unknown>
+  const envId = readProviderString(pub.cloudbaseEnvId)
   const costPerGeneration = Math.max(1, Math.round(Number(runtimeConfig.costPerGeneration) || 1))
 
   const token = readBearerToken(event)

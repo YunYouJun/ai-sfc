@@ -1,56 +1,43 @@
-import type { YunleSsoMessage, YunleUser } from '~/utils/yunle-sso'
+import type { SsoFailureReason } from '@yunlefun/sso/protocol'
+import type { YunleSessionUser, YunleUser } from '~/utils/yunle-sso'
 import { useStorage } from '@vueuse/core'
+import { signInWithSso } from '@yunlefun/sso'
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import {
-  buildYunleSsoUrl,
   defaultYunleSsoOrigin,
-  isExpectedYunleSsoMessage,
   mapYunleSsoSession,
-  readSsoAccessToken,
   readString,
   trimTrailingSlash,
 } from '~/utils/yunle-sso'
 
 const ns = 'ai-sfc'
-const silentTimeout = 12000
-const interactiveTimeout = 120000
 
-type SsoMode = 'silent' | 'interactive'
 type AuthStatus = 'idle' | 'checking' | 'authenticated' | 'anonymous' | 'error'
 
-interface SsoRequest {
-  url: string
-  done: Promise<YunleUser | null>
-  cancel: () => void
-}
-
-function createNonce() {
-  if (window.crypto?.randomUUID)
-    return window.crypto.randomUUID()
-
-  if (window.crypto?.getRandomValues) {
-    const values = new Uint32Array(4)
-    window.crypto.getRandomValues(values)
-    return Array.from(values, value => value.toString(16)).join('')
+function ssoFailMessage(reason: SsoFailureReason): string {
+  switch (reason) {
+    case 'popup_blocked':
+      return '浏览器拦截了登录窗口，请允许弹窗后重试'
+    case 'closed':
+      return '已取消登录'
+    case 'timeout':
+      return '云乐坊账号同步超时'
+    default:
+      return '云乐坊账号同步失败'
   }
-
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
 }
 
 export const useUserStore = defineStore('user', () => {
   const runtimeConfig = useRuntimeConfig()
   const user = useStorage<YunleUser | null>(`${ns}:yunle-user`, null)
-  const accessToken = useStorage(`${ns}:yunle-token`, '')
   const lastSyncedAt = useStorage(`${ns}:yunle-user-synced-at`, 0)
   const status = shallowRef<AuthStatus>(user.value ? 'authenticated' : 'idle')
   const error = shallowRef('')
-  let pendingSilentSync: Promise<YunleUser | null> | null = null
+  let pendingSilent: Promise<YunleUser | null> | null = null
 
-  const ssoOrigin = computed(() => {
-    const configured = readString(runtimeConfig.public.yunleSsoOrigin)
-    return trimTrailingSlash(configured || defaultYunleSsoOrigin)
-  })
-
+  const ssoOrigin = computed(() =>
+    trimTrailingSlash(readString(runtimeConfig.public.yunleSsoOrigin) || defaultYunleSsoOrigin),
+  )
   const loading = computed(() => status.value === 'checking')
   const isAuthenticated = computed(() => !!user.value)
   const displayName = computed(() => user.value?.nickname || user.value?.login || '云乐坊用户')
@@ -68,200 +55,95 @@ export const useUserStore = defineStore('user', () => {
     return new URL(path, `${ssoOrigin.value}/`).toString()
   }
 
-  function buildSsoUrl(mode: SsoMode, nonce: string) {
-    return buildYunleSsoUrl({
-      mode,
-      nonce,
-      ssoOrigin: ssoOrigin.value,
-      targetOrigin: window.location.origin,
-    })
-  }
-
-  function clearAuth(nextStatus: AuthStatus = 'idle') {
-    user.value = null
-    accessToken.value = ''
-    lastSyncedAt.value = 0
-    status.value = nextStatus
-  }
-
-  function createSsoRequest(mode: SsoMode): SsoRequest {
-    if (!import.meta.client) {
-      return {
-        url: '',
-        done: Promise.resolve(user.value),
-        cancel: () => {},
-      }
-    }
+  /** 用 @yunlefun/sso 发起登录（silent 静默 / interactive 弹窗），成功后由它注入 CloudBase 登录态 */
+  async function runSso(mode: 'silent' | 'interactive'): Promise<YunleUser | null> {
+    const auth = useCloudbaseAuth()
+    if (!auth)
+      return user.value
 
     status.value = 'checking'
     error.value = ''
 
-    const nonce = createNonce()
-    const url = buildSsoUrl(mode, nonce)
+    const res = await signInWithSso(auth, { mode, ssoOrigin: ssoOrigin.value }).catch(() => null)
 
-    let resolveDone: (nextUser: YunleUser | null) => void = () => {}
-    let settled = false
-    const done = new Promise<YunleUser | null>((resolve) => {
-      resolveDone = resolve
-    })
-
-    const timeout = window.setTimeout(() => {
-      finish(null, mode === 'silent' ? 'anonymous' : 'error', mode === 'silent' ? '' : '云乐坊账号同步超时')
-    }, mode === 'silent' ? silentTimeout : interactiveTimeout)
-
-    function cleanup() {
-      window.clearTimeout(timeout)
-      window.removeEventListener('message', onMessage)
-    }
-
-    function finish(nextUser: YunleUser | null, nextStatus: AuthStatus, nextError = '', nextToken = '') {
-      if (settled)
-        return
-      settled = true
-      cleanup()
-      if (nextUser) {
-        user.value = nextUser
-        accessToken.value = nextToken
+    if (res?.ok) {
+      const sessionUser = (res.session as { user?: unknown }).user as YunleSessionUser | undefined
+      user.value = mapYunleSsoSession({ user: sessionUser })
+      if (user.value) {
         lastSyncedAt.value = Date.now()
         status.value = 'authenticated'
       }
-      else if (nextStatus === 'anonymous') {
-        clearAuth('anonymous')
-      }
-      else if (nextStatus === 'error') {
-        status.value = 'error'
-      }
       else {
-        status.value = nextStatus
+        status.value = 'anonymous'
       }
-      error.value = nextError
-      resolveDone(nextUser)
-    }
-
-    function onMessage(event: MessageEvent<YunleSsoMessage>) {
-      const data = event.data
-      if (!isExpectedYunleSsoMessage({
-        data,
-        eventOrigin: event.origin,
-        expectedNonce: nonce,
-        expectedOrigin: ssoOrigin.value,
-      })) {
-        return
-      }
-
-      if (!data.ok) {
-        const message = data.reason === 'not_authenticated' ? '' : '云乐坊账号同步失败'
-        finish(null, data.reason === 'not_authenticated' ? 'anonymous' : 'error', message)
-        return
-      }
-
-      const nextUser = mapYunleSsoSession(data.session)
-      if (!nextUser) {
-        finish(null, 'error', '云乐坊账号信息不完整')
-        return
-      }
-
-      finish(nextUser, 'authenticated', '', readSsoAccessToken(data.session))
-    }
-
-    window.addEventListener('message', onMessage)
-
-    return {
-      url,
-      done,
-      cancel: () => finish(null, user.value ? 'authenticated' : 'idle'),
-    }
-  }
-
-  async function requestSso(mode: SsoMode) {
-    if (!import.meta.client)
       return user.value
-
-    const request = createSsoRequest(mode)
-
-    if (mode === 'silent') {
-      const iframe = document.createElement('iframe')
-      iframe.src = request.url
-      iframe.title = 'YunLeFun SSO'
-      iframe.hidden = true
-      iframe.style.display = 'none'
-      document.body.appendChild(iframe)
-      request.done.finally(() => iframe.remove())
-      return await request.done
     }
 
-    return await new Promise<YunleUser | null>((resolve) => {
-      const width = 480
-      const height = 680
-      const left = Math.max(0, window.screenX + (window.outerWidth - width) / 2)
-      const top = Math.max(0, window.screenY + (window.outerHeight - height) / 2)
-
-      const popup = window.open(
-        request.url,
-        'yunle_sso',
-        `width=${width},height=${height},left=${left},top=${top},popup=yes`,
-      )
-
-      if (!popup) {
-        request.cancel()
-        status.value = 'error'
-        error.value = '浏览器拦截了云乐坊登录窗口'
-        resolve(null)
-        return
-      }
-
-      popup.focus()
-      const popupTimer = window.setInterval(() => {
-        if (!popup?.closed)
-          return
-        window.clearInterval(popupTimer)
-        request.cancel()
-      }, 500)
-
-      request.done.finally(() => {
-        window.clearInterval(popupTimer)
-        resolve(user.value)
-      })
-    })
+    // 失败：未登录 → 清空；网络/超时/弹窗问题 → 保留现有登录态
+    const reason = res?.reason ?? 'error'
+    if (reason === 'not_authenticated') {
+      user.value = null
+      lastSyncedAt.value = 0
+      status.value = 'anonymous'
+    }
+    else if (mode === 'interactive') {
+      status.value = user.value ? 'authenticated' : 'error'
+      error.value = ssoFailMessage(reason)
+    }
+    else {
+      status.value = user.value ? 'authenticated' : 'anonymous'
+    }
+    return user.value
   }
 
   async function syncSilently(options: { force?: boolean } = {}) {
     if (!import.meta.client)
       return user.value
-
-    if (pendingSilentSync)
-      return pendingSilentSync
+    if (pendingSilent)
+      return pendingSilent
 
     const isFresh = Date.now() - lastSyncedAt.value < 5 * 60 * 1000
     if (!options.force && user.value && isFresh)
       return user.value
 
-    pendingSilentSync = requestSso('silent').finally(() => {
-      pendingSilentSync = null
+    pendingSilent = runSso('silent').finally(() => {
+      pendingSilent = null
     })
-
-    return pendingSilentSync
+    return pendingSilent
   }
 
   async function login() {
-    return await requestSso('interactive')
-  }
-
-  function createInteractiveLogin() {
-    return createSsoRequest('interactive')
+    return runSso('interactive')
   }
 
   async function refresh() {
-    return await syncSilently({ force: true })
+    return syncSilently({ force: true })
   }
 
-  function logout() {
-    clearAuth('idle')
+  async function logout() {
+    const auth = useCloudbaseAuth()
+    try {
+      await auth?.signOut()
+    }
+    catch {}
+    user.value = null
+    lastSyncedAt.value = 0
+    status.value = 'idle'
     error.value = ''
   }
 
-  function getAccessToken() {
-    return accessToken.value
+  /** 取当前 access_token（CloudBase SDK 自动续期）；未登录或失效返回空串 */
+  async function getAccessToken(): Promise<string> {
+    const auth = useCloudbaseAuth()
+    if (!auth)
+      return ''
+    try {
+      const res = await auth.getAccessToken()
+      return res?.accessToken ?? ''
+    }
+    catch {
+      return ''
+    }
   }
 
   return {
@@ -275,7 +157,6 @@ export const useUserStore = defineStore('user', () => {
     getYunleUrl,
     syncSilently,
     login,
-    createInteractiveLogin,
     refresh,
     logout,
     getAccessToken,

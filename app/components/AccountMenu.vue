@@ -2,65 +2,29 @@
 const userStore = useUserStore()
 const wallet = useWalletStore()
 const open = shallowRef(false)
-const loginDialogOpen = shallowRef(false)
-const loginFrameUrl = shallowRef('')
-let loginRequest: ReturnType<typeof userStore.createInteractiveLogin> | null = null
 
 const accountInitial = computed(() => userStore.displayName.slice(0, 1).toUpperCase())
 const userSubtitle = computed(() => userStore.user?.email || userStore.user?.phone || userStore.user?.login || '云乐坊账号')
 const rechargeUrl = computed(() => userStore.getYunleUrl('/wallet?from=ai-sfc'))
 
 async function login() {
-  closeLoginDialog()
-
-  const request = userStore.createInteractiveLogin()
-  loginRequest = request
-  loginFrameUrl.value = request.url
-  loginDialogOpen.value = true
-
-  const nextUser = await request.done
-  if (loginRequest !== request)
-    return
-
-  loginRequest = null
-  loginFrameUrl.value = ''
-  loginDialogOpen.value = false
-  if (nextUser)
-    open.value = false
-}
-
-async function loginInWindow() {
-  closeLoginDialog()
   await userStore.login()
-  open.value = false
-}
-
-function closeLoginDialog() {
-  if (loginRequest) {
-    const request = loginRequest
-    loginRequest = null
-    request.cancel()
-  }
-  loginFrameUrl.value = ''
-  loginDialogOpen.value = false
+  if (userStore.isAuthenticated)
+    open.value = false
 }
 
 async function refresh() {
   await userStore.refresh()
 }
 
-function logout() {
-  userStore.logout()
+async function logout() {
+  await userStore.logout()
   open.value = false
 }
 
 onMounted(() => {
   if (userStore.isAuthenticated)
     wallet.refresh()
-})
-
-onBeforeUnmount(() => {
-  closeLoginDialog()
 })
 </script>
 
@@ -135,52 +99,9 @@ onBeforeUnmount(() => {
       </button>
       <button type="button" class="account-action danger" @click="logout">
         <span class="i-ri-logout-box-r-line" />
-        <span>退出本机</span>
+        <span>退出登录</span>
       </button>
     </div>
-
-    <Teleport to="body">
-      <div
-        v-if="loginDialogOpen"
-        class="sso-overlay"
-        role="dialog"
-        aria-modal="true"
-        aria-label="云乐坊账号登录"
-        @click.self="closeLoginDialog"
-      >
-        <section class="sso-dialog" aria-labelledby="sso-dialog-title">
-          <header class="sso-dialog-header">
-            <span class="sso-dialog-mark" aria-hidden="true">🧧</span>
-            <div>
-              <strong id="sso-dialog-title" class="font-zmx">云乐坊账号</strong>
-              <span>登录后回到 AI 春联</span>
-            </div>
-            <button type="button" class="sso-close" aria-label="关闭登录窗口" @click="closeLoginDialog">
-              <span class="i-ri-close-line" />
-            </button>
-          </header>
-
-          <div class="sso-frame-shell">
-            <iframe
-              v-if="loginFrameUrl"
-              class="sso-frame"
-              :src="loginFrameUrl"
-              title="云乐坊账号登录"
-              referrerpolicy="origin"
-            />
-          </div>
-
-          <footer class="sso-dialog-footer">
-            <span v-if="userStore.error" class="sso-error">{{ userStore.error }}</span>
-            <span v-else class="sso-hint">要让 www.yunle.fun 也保持登录，请用新窗口。</span>
-            <button type="button" class="font-zmx sso-window-button" @click="loginInWindow">
-              <span class="i-ri-external-link-line" />
-              <span>新窗口登录</span>
-            </button>
-          </footer>
-        </section>
-      </div>
-    </Teleport>
   </div>
 </template>
 
@@ -442,222 +363,6 @@ onBeforeUnmount(() => {
   color: #ff9b8e;
 }
 
-.sso-overlay {
-  position: fixed;
-  z-index: 100;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 1rem;
-  background: radial-gradient(circle at 50% 18%, rgba(255, 219, 142, 0.18), transparent 28rem), rgba(35, 13, 10, 0.52);
-  backdrop-filter: blur(12px);
-}
-
-.sso-dialog {
-  width: min(100%, 31rem);
-  max-height: min(46rem, calc(100vh - 2rem));
-  display: grid;
-  grid-template-rows: auto minmax(22rem, 1fr) auto;
-  overflow: hidden;
-  border: 1px solid rgba(126, 36, 23, 0.18);
-  border-radius: 8px;
-  background:
-    linear-gradient(90deg, rgba(126, 36, 23, 0.05) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(126, 36, 23, 0.05) 1px, transparent 1px), #fff8ec;
-  background-size:
-    18px 18px,
-    18px 18px,
-    auto;
-  box-shadow: 0 28px 80px rgba(40, 14, 10, 0.28);
-}
-
-.sso-dialog-header,
-.sso-dialog-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.85rem;
-}
-
-.sso-dialog-header {
-  border-bottom: 1px solid rgba(126, 36, 23, 0.12);
-  background: linear-gradient(180deg, rgba(255, 243, 212, 0.92), rgba(255, 248, 236, 0.8));
-}
-
-.sso-dialog-mark {
-  width: 2.75rem;
-  height: 2.75rem;
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(179, 38, 30, 0.24);
-  border-radius: 8px;
-  background: linear-gradient(145deg, #fff3d4, #f6cf83);
-  box-shadow:
-    inset 0 0 0 3px rgba(255, 255, 255, 0.35),
-    0 12px 28px rgba(109, 24, 18, 0.12);
-  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
-  font-size: 2rem;
-  line-height: 1;
-}
-
-.sso-dialog-header div {
-  min-width: 0;
-  display: grid;
-  gap: 0.15rem;
-}
-
-.sso-dialog-header strong {
-  color: #a9231b;
-  font-size: 1.65rem;
-  font-weight: 400;
-  line-height: 1;
-}
-
-.sso-dialog-header span,
-.sso-hint {
-  color: rgba(59, 23, 17, 0.62);
-  font-size: 0.82rem;
-}
-
-.sso-hint {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  line-height: 1.45;
-}
-
-.sso-close {
-  width: 2.25rem;
-  height: 2.25rem;
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  color: #3b1711;
-}
-
-.sso-close:hover {
-  background: rgba(179, 38, 30, 0.08);
-  color: #a9231b;
-}
-
-.sso-frame-shell {
-  min-height: 32rem;
-  padding: 0.6rem;
-  background: linear-gradient(180deg, rgba(255, 253, 247, 0.74), rgba(255, 243, 212, 0.54)), #fff8ec;
-}
-
-.sso-frame {
-  width: 100%;
-  height: 100%;
-  min-height: 30.8rem;
-  overflow: hidden;
-  border: 1px solid rgba(126, 36, 23, 0.12);
-  border-radius: 6px;
-  background: #fff;
-}
-
-.sso-dialog-footer {
-  border-top: 1px solid rgba(126, 36, 23, 0.12);
-  background: rgba(255, 253, 247, 0.66);
-}
-
-.sso-error {
-  color: #a9231b;
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-
-.sso-window-button {
-  min-height: 2.5rem;
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.35rem;
-  padding: 0.45rem 0.8rem;
-  border: 1px solid rgba(255, 220, 137, 0.5);
-  border-radius: 999px;
-  background: #b3261e;
-  color: #fff2c7;
-  font-size: 1.05rem;
-  font-weight: 400;
-  letter-spacing: 0;
-  box-shadow: 0 10px 24px rgba(179, 38, 30, 0.18);
-}
-
-.sso-window-button:hover {
-  border-color: rgba(179, 38, 30, 0.3);
-  background: #a9231b;
-  color: #fff7df;
-}
-
-.dark .sso-overlay {
-  background: rgba(7, 5, 6, 0.62);
-}
-
-.dark .sso-dialog {
-  border-color: rgba(255, 219, 142, 0.16);
-  background:
-    linear-gradient(90deg, rgba(255, 219, 142, 0.04) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(255, 219, 142, 0.04) 1px, transparent 1px), #231414;
-  background-size:
-    18px 18px,
-    18px 18px,
-    auto;
-  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.46);
-}
-
-.dark .sso-dialog-header {
-  background: linear-gradient(180deg, rgba(48, 24, 22, 0.96), rgba(35, 20, 20, 0.82));
-}
-
-.dark .sso-dialog-header,
-.dark .sso-dialog-footer {
-  border-color: rgba(255, 219, 142, 0.13);
-}
-
-.dark .sso-close,
-.dark .sso-window-button {
-  color: #fff4d6;
-}
-
-.dark .sso-dialog-header strong {
-  color: #ffcf72;
-}
-
-.dark .sso-dialog-header span,
-.dark .sso-hint {
-  color: rgba(255, 244, 214, 0.64);
-}
-
-.dark .sso-close:hover {
-  color: #ffdb8e;
-}
-
-.dark .sso-frame-shell,
-.dark .sso-dialog-footer {
-  background: rgba(25, 17, 18, 0.68);
-}
-
-.dark .sso-frame {
-  border-color: rgba(255, 219, 142, 0.12);
-  background: #170f12;
-}
-
-.dark .sso-window-button {
-  border-color: rgba(255, 219, 142, 0.32);
-  background: #d93c32;
-}
-
-.dark .sso-window-button:hover {
-  background: #bf3028;
-  color: #fff7df;
-}
-
 @media (max-width: 640px) {
   .account-name,
   .account-chevron {
@@ -666,33 +371,6 @@ onBeforeUnmount(() => {
 
   .account-trigger {
     padding-right: 0.25rem;
-  }
-
-  .sso-overlay {
-    padding: 0.5rem;
-  }
-
-  .sso-dialog {
-    max-height: calc(100vh - 1rem);
-    grid-template-rows: auto minmax(24rem, 1fr) auto;
-  }
-
-  .sso-frame-shell {
-    min-height: 28rem;
-    padding: 0.45rem;
-  }
-
-  .sso-frame {
-    min-height: 27rem;
-  }
-
-  .sso-dialog-footer {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .sso-window-button {
-    justify-content: center;
   }
 }
 </style>

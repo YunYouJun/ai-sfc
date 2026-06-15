@@ -1,7 +1,6 @@
+// SSO 协议（URL 构造 / 消息校验）已交给官方包 @yunlefun/sso；这里只保留把 CloudBase
+// session.user 映射为本地展示用户的逻辑。
 export const defaultYunleSsoOrigin = 'https://www.yunle.fun'
-export const yunleSsoPath = '/auth/sso'
-
-export type YunleSsoMode = 'silent' | 'interactive'
 
 export interface YunleSessionUser {
   id?: string
@@ -18,22 +17,6 @@ export interface YunleSessionUser {
 
 export interface YunleSsoSession {
   user?: YunleSessionUser
-  access_token?: string
-  refresh_token?: string
-  expires_at?: number
-}
-
-/** 从 CloudBase SSO session 取出 access_token（供服务端鉴权使用） */
-export function readSsoAccessToken(session?: YunleSsoSession): string {
-  return readString(session?.access_token)
-}
-
-export interface YunleSsoMessage {
-  type?: 'ylf:sso-result'
-  ok?: boolean
-  nonce?: string
-  reason?: string
-  session?: YunleSsoSession
 }
 
 export interface YunleUser {
@@ -64,6 +47,7 @@ export function readMetadataString(metadata: Record<string, unknown> | undefined
   return ''
 }
 
+/** 把 CloudBase session.user 映射为本地展示用户（头像/昵称取自 user_metadata） */
 export function mapYunleSsoSession(session?: YunleSsoSession): YunleUser | null {
   const source = session?.user
   if (!source?.id)
@@ -85,35 +69,4 @@ export function mapYunleSsoSession(session?: YunleSsoSession): YunleUser | null 
     role: role || 'USER',
     providers: source.app_metadata?.providers || [],
   }
-}
-
-export function buildYunleSsoUrl(options: {
-  mode: YunleSsoMode
-  nonce: string
-  ssoOrigin: string
-  targetOrigin: string
-}) {
-  const url = new URL(yunleSsoPath, trimTrailingSlash(options.ssoOrigin))
-  url.searchParams.set('mode', options.mode)
-  url.searchParams.set('targetOrigin', options.targetOrigin)
-  url.searchParams.set('nonce', options.nonce)
-  return url.toString()
-}
-
-export function isExpectedYunleSsoMessage(options: {
-  data: unknown
-  eventOrigin: string
-  expectedNonce: string
-  expectedOrigin: string
-}): options is {
-  data: YunleSsoMessage
-  eventOrigin: string
-  expectedNonce: string
-  expectedOrigin: string
-} {
-  if (options.eventOrigin !== options.expectedOrigin)
-    return false
-
-  const data = options.data as YunleSsoMessage
-  return data?.type === 'ylf:sso-result' && data.nonce === options.expectedNonce
 }

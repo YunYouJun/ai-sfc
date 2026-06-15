@@ -52,7 +52,7 @@ async function generate() {
       // 登录 → 服务端用云币生成（token 仅作鉴权，模型 key 在服务端）
       const data = await apiGenerate({
         prompt: app.prompt,
-        token: userStore.getAccessToken(),
+        token: await userStore.getAccessToken(),
         bizId: crypto.randomUUID(),
       })
       if (typeof data.balance === 'number')

@@ -27,7 +27,7 @@ export const useWalletStore = defineStore('wallet', () => {
     }
     loading.value = true
     try {
-      const data = await apiGetBalance(userStore.getAccessToken())
+      const data = await apiGetBalance(await userStore.getAccessToken())
       if (data) {
         balance.value = typeof data.balance === 'number' ? data.balance : null
         if (typeof data.costPerGeneration === 'number')

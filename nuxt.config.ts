@@ -73,8 +73,7 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
-    // 登录扣云币：服务端用用户 access_token HTTP 直调 CloudBase，仅需公开 envId（无 admin 密钥）
-    cloudbaseEnvId: 'yunlefun-8g7ybcxc7345c490',
+    // 登录扣云币：服务端用用户 access_token HTTP 直调 CloudBase（envId 公开，无 admin 密钥）
     cloudbaseModel: 'deepseek-v4-flash',
     cloudbaseModelGroup: 'custom-deepseek-open',
     costPerGeneration: 1,
@@ -82,6 +81,7 @@ export default defineNuxtConfig({
     openaiBaseURL: 'https://api.deepseek.com/v1',
     openaiModel: 'deepseek-chat',
     public: {
+      cloudbaseEnvId: 'yunlefun-8g7ybcxc7345c490',
       yunleSsoOrigin: 'https://www.yunle.fun',
     },
   },
