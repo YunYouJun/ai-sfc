@@ -1,8 +1,18 @@
 <script setup lang="ts">
+import { useDocumentVisibility } from '@vueuse/core'
+
 const userStore = useUserStore()
+const wallet = useWalletStore()
+const visibility = useDocumentVisibility()
 
 onMounted(() => {
   userStore.syncSilently()
+})
+
+// 从云乐坊钱包等外部页返回（充值后）时刷新余额
+watch(visibility, (state) => {
+  if (state === 'visible' && userStore.isAuthenticated)
+    wallet.refresh()
 })
 </script>
 

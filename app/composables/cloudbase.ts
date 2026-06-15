@@ -2,7 +2,12 @@ import cloudbase from '@cloudbase/js-sdk'
 
 function initAuth() {
   const config = useRuntimeConfig()
-  const app = cloudbase.init({ env: String(config.public.cloudbaseEnvId) })
+  const app = cloudbase.init({
+    env: String(config.public.cloudbaseEnvId),
+    region: 'ap-shanghai',
+    // ⚠️ 必须 false：自动模式会消费 URL 上的 OAuth code 并整页刷新，吞掉绑定结果、产生竞态（官方接入坑①）
+    auth: { detectSessionInUrl: false },
+  })
   return app.auth({ persistence: 'local' })
 }
 

@@ -1,18 +1,9 @@
-import type { SprintFestivalCouplets } from '~~/packages/ai/src/couplets'
 import type { AiProviderRequest } from './ai-provider'
+import type { ApiGenerateResult } from './api'
 // ⚠️ 仅从同构子模块引入，切勿 import 包入口 `~~/packages/ai/src`（其会执行 cli 的 main()）
 import { buildCoupletMessages, parseCoupletContent } from '~~/packages/ai/src/couplets'
 import { config } from '~/config'
 import { defaultAiBaseURL, defaultAiModel } from './ai-provider'
-
-export type LocalGenerateResult = SprintFestivalCouplets & { error?: string }
-
-const fallbackCouplets: SprintFestivalCouplets = {
-  上联: '网络出错网络差',
-  下联: '热门火爆排队多',
-  横批: '掉线断网',
-  总结: '寄',
-}
 
 function trimTrailingSlash(value: string) {
   return value.replace(/\/+$/, '')
@@ -25,7 +16,7 @@ function trimTrailingSlash(value: string) {
 export async function generateCoupletsDirect(
   prompt: string,
   provider: AiProviderRequest,
-): Promise<LocalGenerateResult> {
+): Promise<ApiGenerateResult> {
   const baseURL = trimTrailingSlash(provider.baseURL || defaultAiBaseURL)
   const model = provider.model || defaultAiModel
   const apiKey = provider.apiKey || ''
@@ -46,25 +37,24 @@ export async function generateCoupletsDirect(
 
     if (!res.ok) {
       const detail = await res.text().catch(() => '')
-      throw new Error(`模型接口请求失败（${res.status}）${detail ? `：${detail.slice(0, 160)}` : ''}`)
+      return {
+        ok: false,
+        statusCode: res.status,
+        message: `模型接口请求失败（${res.status}）${detail ? `：${detail.slice(0, 160)}` : ''}`,
+      }
     }
 
     const data = await res.json() as {
       choices?: { message?: { content?: string } }[]
     }
-    const content = data.choices?.[0]?.message?.content
-    const coupletData = parseCoupletContent(content)
+    const couplets = parseCoupletContent(data.choices?.[0]?.message?.content)
+    if (!couplets)
+      return { ok: false, message: '模型返回内容无法解析为春联，请调整提示词重试。' }
 
-    if (!coupletData)
-      throw new Error('模型返回内容无法解析为春联。')
-
-    return coupletData
+    return { ok: true, couplets }
   }
   catch (error: any) {
     console.error('generateCoupletsDirect', error)
-    return {
-      ...fallbackCouplets,
-      error: error?.message || '模型接口请求失败',
-    }
+    return { ok: false, message: error?.message || '模型接口请求失败，请检查接口地址与网络。' }
   }
 }

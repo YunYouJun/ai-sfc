@@ -12,6 +12,10 @@ const wallet = useWalletStore()
 const needsSetup = computed(() => !userStore.isAuthenticated && !aiSettings.hasToken)
 /** 登录且余额已知时展示剩余可生成次数 */
 const showRemaining = computed(() => userStore.isAuthenticated && wallet.remaining !== null)
+const rechargeUrl = computed(() => userStore.getYunleUrl('/wallet?from=ai-sfc'))
+
+/** 生成失败提示（按 statusCode 区分引导：402 充值 / 401 重登 / 其它重试） */
+const generateError = shallowRef<{ statusCode?: number, message: string } | null>(null)
 
 const promptPresets = [
   '家人平安，事业顺遂',
@@ -40,29 +44,32 @@ async function generate() {
     return
   }
 
-  // 登录但云币已用尽：引导去充值
+  // 登录但云币已用尽：直接引导去充值
   if (userStore.isAuthenticated && wallet.remaining === 0) {
-    window.open(userStore.getYunleUrl('/wallet?from=ai-sfc'), '_blank', 'noopener')
+    window.open(rechargeUrl.value, '_blank', 'noopener')
     return
   }
 
+  generateError.value = null
   app.loading = true
   try {
-    if (userStore.isAuthenticated) {
+    const res = userStore.isAuthenticated
       // 登录 → 服务端用云币生成（token 仅作鉴权，模型 key 在服务端）
-      const data = await apiGenerate({
-        prompt: app.prompt,
-        token: await userStore.getAccessToken(),
-        bizId: crypto.randomUUID(),
-      })
-      if (typeof data.balance === 'number')
-        wallet.setBalance(data.balance)
-      await app.setCoupletsData(data)
+      ? await apiGenerate({
+          prompt: app.prompt,
+          token: await userStore.getAccessToken(),
+          bizId: crypto.randomUUID(),
+        })
+      // 未登录但有 token → 浏览器直连，token 不经过服务端
+      : await generateCoupletsDirect(app.prompt, aiSettings.resolvedProvider)
+
+    if (res.ok) {
+      if (res.balance !== undefined)
+        wallet.setBalance(res.balance)
+      await app.setCoupletsData(res.couplets)
     }
     else {
-      // 未登录但有 token → 浏览器直连，token 不经过服务端
-      const data = await generateCoupletsDirect(app.prompt, aiSettings.resolvedProvider)
-      await app.setCoupletsData(data)
+      generateError.value = res
     }
   }
   finally {
@@ -107,6 +114,26 @@ watch(() => [Cmd_enter?.value, Ctrl_enter?.value], ([cmdEnter, ctrlEnter]) => {
       <span>
         未登录：请先<NuxtLink to="/settings">填写模型 Token</NuxtLink> 直连生成，或点击右上角登录使用云币。
       </span>
+    </div>
+
+    <div v-if="generateError" class="generate-error">
+      <span class="i-ri-error-warning-line" />
+      <span class="generate-error-text">{{ generateError.message }}</span>
+      <a
+        v-if="generateError.statusCode === 402"
+        class="error-cta"
+        :href="rechargeUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+      >去充值</a>
+      <button
+        v-else-if="generateError.statusCode === 401"
+        type="button"
+        class="error-cta"
+        @click="userStore.login()"
+      >
+        重新登录
+      </button>
     </div>
 
     <div class="composer-footer">
@@ -217,6 +244,51 @@ watch(() => [Cmd_enter?.value, Ctrl_enter?.value], ([cmdEnter, ctrlEnter]) => {
 .dark .setup-notice {
   border-color: rgba(255, 155, 142, 0.22);
   background: rgba(255, 155, 142, 0.08);
+  color: #ff9b8e;
+}
+
+.generate-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid rgba(179, 38, 30, 0.28);
+  border-radius: 8px;
+  background: rgba(179, 38, 30, 0.08);
+  color: #a9231b;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.generate-error span:first-child {
+  flex: 0 0 auto;
+}
+
+.generate-error-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.error-cta {
+  flex: 0 0 auto;
+  min-height: 1.9rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  background: #b3261e;
+  color: #fff2c7;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.error-cta:hover {
+  background: #a9231b;
+}
+
+.dark .generate-error {
+  border-color: rgba(255, 155, 142, 0.28);
+  background: rgba(255, 155, 142, 0.1);
   color: #ff9b8e;
 }
 

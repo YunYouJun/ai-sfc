@@ -1,22 +1,23 @@
 import type { SprintFestivalCouplets } from '~~/packages/ai/src/couplets'
 
-export interface ServerGenerateResult extends SprintFestivalCouplets {
-  error?: string
-  /** 扣费后的云币余额（仅登录扣费链路返回） */
+export interface ApiGenerateOk {
+  ok: true
+  couplets: SprintFestivalCouplets
+  /** 扣费后云币余额（仅登录扣费链路返回） */
   balance?: number
 }
+export interface ApiGenerateErr {
+  ok: false
+  /** HTTP 状态码：401 登录失效 / 402 余额不足 / 其它 */
+  statusCode?: number
+  message: string
+}
+export type ApiGenerateResult = ApiGenerateOk | ApiGenerateErr
 
 export interface WalletBalance {
   /** 云币余额；未配置 CloudBase 或接口缺失时为 null */
   balance: number | null
   costPerGeneration: number
-}
-
-const fallbackResult: SprintFestivalCouplets = {
-  上联: '网络出错网络差',
-  下联: '热门火爆排队多',
-  横批: '掉线断网',
-  总结: '寄',
 }
 
 /**
@@ -27,19 +28,21 @@ export async function apiGenerate(params: {
   prompt: string
   token?: string
   bizId?: string
-}): Promise<ServerGenerateResult> {
+}): Promise<ApiGenerateResult> {
   try {
-    return await $fetch<ServerGenerateResult>('/api/generate', {
+    const data = await $fetch<SprintFestivalCouplets & { balance?: number }>('/api/generate', {
       method: 'POST',
       headers: params.token ? { Authorization: `Bearer ${params.token}` } : undefined,
       body: { prompt: params.prompt, bizId: params.bizId },
     })
+    return { ok: true, couplets: data, balance: data.balance }
   }
   catch (error: any) {
     console.error('apiGenerate', error)
     return {
-      ...fallbackResult,
-      error: error?.data?.message || error?.message || '模型接口请求失败',
+      ok: false,
+      statusCode: error?.statusCode ?? error?.response?.status,
+      message: error?.data?.message || error?.message || '生成失败，请稍后重试',
     }
   }
 }
