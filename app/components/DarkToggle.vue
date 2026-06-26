@@ -5,7 +5,7 @@ useHead({
   meta: [{
     id: 'theme-color',
     name: 'theme-color',
-    content: () => color.value === 'dark' ? '#170f12' : '#fff8ec',
+    content: () => color.value === 'dark' ? '#160e0f' : '#fff8ec',
   }],
 })
 
@@ -26,14 +26,15 @@ function toggleDark() {
 .theme-toggle {
   width: 2.5rem;
   height: 2.5rem;
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(126, 36, 23, 0.18);
+  border: 1px solid var(--sfc-border-strong);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.76);
-  color: #3b1711;
-  box-shadow: 0 12px 32px rgba(97, 29, 18, 0.1);
+  background: var(--sfc-control);
+  color: var(--sfc-ink);
+  box-shadow: var(--sfc-control-shadow);
   backdrop-filter: blur(14px);
   transition:
     transform 0.18s ease,
@@ -53,9 +54,16 @@ function toggleDark() {
 }
 
 .dark .theme-toggle {
-  border-color: rgba(255, 219, 142, 0.16);
-  background: rgba(48, 24, 22, 0.76);
-  color: #fff4d6;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.26);
+  border-color: var(--sfc-border-strong);
+  background: var(--sfc-control);
+  color: var(--sfc-gold-soft);
+  box-shadow: var(--sfc-control-shadow);
+}
+
+@media (max-width: 640px) {
+  .theme-toggle {
+    width: 2.35rem;
+    height: 2.35rem;
+  }
 }
 </style>

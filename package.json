@@ -24,8 +24,7 @@
   "dependencies": {
     "@cloudbase/js-sdk": "^3.4.6",
     "@yunlefun/sso": "^0.1.0",
-    "ofetch": "1.5.1",
-    "wc-github-corners": "^0.1.6"
+    "ofetch": "1.5.1"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^9.0.0",

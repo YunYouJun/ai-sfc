@@ -1,4 +1,48 @@
 // transition
+:root {
+  --sfc-paper: #fff8ec;
+  --sfc-paper-soft: #fffdf7;
+  --sfc-ink: #35140f;
+  --sfc-ink-muted: rgba(53, 20, 15, 0.58);
+  --sfc-cinnabar: #b3261e;
+  --sfc-cinnabar-deep: #8f1f18;
+  /* 印章/春联实色——填充用的正红，浅色模式下与朱砂同色 */
+  --sfc-seal: #b3261e;
+  --sfc-seal-deep: #8f1f18;
+  --sfc-gold: #f6cf83;
+  --sfc-gold-soft: #fff2c7;
+  --sfc-jade: #0f6b56;
+  --sfc-border: rgba(126, 36, 23, 0.14);
+  --sfc-border-strong: rgba(126, 36, 23, 0.18);
+  --sfc-panel: rgba(255, 253, 247, 0.82);
+  --sfc-control: rgba(255, 255, 255, 0.76);
+  --sfc-shadow: 0 22px 70px rgba(97, 29, 18, 0.12);
+  --sfc-control-shadow: 0 12px 32px rgba(97, 29, 18, 0.1);
+}
+
+.dark {
+  /* 玄墨底——温暖近黑、带一丝朱漆暖调，避免发灰发褐 */
+  --sfc-paper: #160e0f;
+  --sfc-paper-soft: #241617;
+  --sfc-ink: #f8e9c6;
+  --sfc-ink-muted: rgba(248, 233, 198, 0.56);
+  /* 朱砂作「文字强调色」时须够亮才清晰 */
+  --sfc-cinnabar: #f0a293;
+  --sfc-cinnabar-deep: #f58c7c;
+  /* 朱砂作「实色填充」（印章/生成钮/充值）时保留深正红，方显年味与雅致 */
+  --sfc-seal: #c6322b;
+  --sfc-seal-deep: #a8231d;
+  --sfc-gold: #f3c768;
+  --sfc-gold-soft: #fff3d4;
+  --sfc-jade: #74d2af;
+  --sfc-border: rgba(255, 222, 153, 0.12);
+  --sfc-border-strong: rgba(255, 222, 153, 0.2);
+  --sfc-panel: rgba(37, 24, 23, 0.74);
+  --sfc-control: rgba(46, 29, 27, 0.72);
+  --sfc-shadow: 0 24px 72px rgba(0, 0, 0, 0.42);
+  --sfc-control-shadow: 0 16px 38px rgba(0, 0, 0, 0.36);
+}
+
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.3s ease;

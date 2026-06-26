@@ -46,10 +46,10 @@ const app = useAppStore()
 
 .prompt-panel,
 .preview-panel {
-  border: 1px solid rgba(126, 36, 23, 0.14);
+  border: 1px solid var(--sfc-border);
   border-radius: 8px;
-  background: rgba(255, 253, 247, 0.78);
-  box-shadow: 0 22px 70px rgba(97, 29, 18, 0.12);
+  background: var(--sfc-panel);
+  box-shadow: var(--sfc-shadow);
   backdrop-filter: blur(16px);
 }
 
@@ -75,18 +75,14 @@ const app = useAppStore()
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  color: rgba(53, 20, 15, 0.62);
+  color: var(--sfc-ink-muted);
 }
 
 .dark .prompt-panel,
 .dark .preview-panel {
-  border-color: rgba(255, 219, 142, 0.14);
-  background: rgba(43, 23, 22, 0.78);
-  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.26);
-}
-
-.dark .preview-loading {
-  color: rgba(255, 243, 216, 0.66);
+  border-color: var(--sfc-border);
+  background: var(--sfc-panel);
+  box-shadow: var(--sfc-shadow);
 }
 
 @media (max-width: 900px) {
@@ -103,12 +99,27 @@ const app = useAppStore()
 @media (max-width: 640px) {
   .home-page {
     width: min(100% - 1rem, 72rem);
-    padding-top: 0.5rem;
+    padding-top: 0.25rem;
   }
 
   .prompt-panel,
   .preview-panel {
     padding: 1rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .home-page {
+    width: min(100% - 0.75rem, 72rem);
+  }
+
+  .tool-grid {
+    gap: 0.85rem;
+  }
+
+  .prompt-panel,
+  .preview-panel {
+    padding: 0.85rem;
   }
 }
 </style>

@@ -48,7 +48,7 @@ export const useUserStore = defineStore('user', () => {
       return displayName.value
     if (status.value === 'error')
       return '同步失败'
-    return '云乐坊登录'
+    return '登录'
   })
 
   function getYunleUrl(path = '/') {

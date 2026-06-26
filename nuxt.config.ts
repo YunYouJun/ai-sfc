@@ -60,14 +60,6 @@ export default defineNuxtConfig({
     '~/styles/index.scss',
   ],
 
-  vue: {
-    compilerOptions: {
-      isCustomElement: (tag) => {
-        return ['github-corners'].includes(tag)
-      },
-    },
-  },
-
   colorMode: {
     classSuffix: '',
   },

@@ -54,13 +54,14 @@ onMounted(() => {
       type="button"
       class="font-zmx account-login"
       :disabled="userStore.loading"
+      :aria-label="userStore.accountLabel"
       @click="login"
     >
       <span
         class="account-login-icon"
         :class="userStore.loading ? 'i-svg-spinners:pulse' : 'i-ri-user-smile-line'"
       />
-      <span>{{ userStore.accountLabel }}</span>
+      <span class="account-login-copy">{{ userStore.accountLabel }}</span>
     </button>
 
     <div v-if="userStore.isAuthenticated && open" class="account-popover">
@@ -113,14 +114,15 @@ onMounted(() => {
 .account-trigger,
 .account-login {
   min-height: 2.5rem;
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  border: 1px solid rgba(126, 36, 23, 0.18);
+  border: 1px solid var(--sfc-border-strong);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.76);
-  color: #3b1711;
-  box-shadow: 0 12px 32px rgba(97, 29, 18, 0.1);
+  background: var(--sfc-control);
+  color: var(--sfc-ink);
+  box-shadow: var(--sfc-control-shadow);
   backdrop-filter: blur(14px);
   transition:
     transform 0.18s ease,
@@ -133,13 +135,16 @@ onMounted(() => {
 }
 
 .account-login {
-  padding: 0.45rem 0.9rem;
+  justify-content: center;
+  padding: 0.45rem 1rem;
   border-color: rgba(179, 38, 30, 0.28);
-  background: linear-gradient(145deg, rgba(255, 243, 212, 0.96), rgba(246, 207, 131, 0.82));
-  color: #a9231b;
+  background: linear-gradient(145deg, rgba(255, 242, 199, 0.94), rgba(246, 207, 131, 0.76)), var(--sfc-gold-soft);
+  color: var(--sfc-cinnabar);
   font-size: 1.08rem;
   font-weight: 400;
   letter-spacing: 0;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .account-trigger:hover,
@@ -167,8 +172,8 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #b3261e;
-  color: #fff8df;
+  background: var(--sfc-seal);
+  color: var(--sfc-gold-soft);
   font-weight: 800;
 }
 
@@ -181,13 +186,21 @@ onMounted(() => {
 }
 
 .account-chevron {
-  color: rgba(59, 23, 17, 0.64);
+  color: var(--sfc-ink-muted);
 }
 
 .account-login-icon {
   width: 1.1rem;
   height: 1.1rem;
-  color: #b3261e;
+  flex: 0 0 auto;
+  color: var(--sfc-cinnabar);
+}
+
+.account-login-copy {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .account-popover {
@@ -197,7 +210,7 @@ onMounted(() => {
   z-index: 20;
   width: min(18rem, calc(100vw - 2rem));
   padding: 0.6rem;
-  border: 1px solid rgba(126, 36, 23, 0.18);
+  border: 1px solid var(--sfc-border-strong);
   border-radius: 8px;
   background: rgba(255, 253, 247, 0.96);
   box-shadow: 0 24px 60px rgba(56, 18, 12, 0.2);
@@ -209,7 +222,7 @@ onMounted(() => {
   align-items: center;
   gap: 0.75rem;
   padding: 0.55rem;
-  border-bottom: 1px solid rgba(126, 36, 23, 0.12);
+  border-bottom: 1px solid var(--sfc-border);
   margin-bottom: 0.35rem;
 }
 
@@ -232,7 +245,7 @@ onMounted(() => {
 }
 
 .account-card-copy span {
-  color: rgba(59, 23, 17, 0.64);
+  color: var(--sfc-ink-muted);
   font-size: 0.82rem;
 }
 
@@ -254,7 +267,7 @@ onMounted(() => {
 }
 
 .wallet-label {
-  color: rgba(59, 23, 17, 0.62);
+  color: var(--sfc-ink-muted);
   font-size: 0.74rem;
   font-weight: 800;
 }
@@ -263,7 +276,7 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  color: #a9231b;
+  color: var(--sfc-cinnabar);
   font-size: 1.4rem;
   font-weight: 700;
   line-height: 1;
@@ -275,14 +288,14 @@ onMounted(() => {
   align-items: center;
   padding: 0.3rem 0.95rem;
   border-radius: 999px;
-  background: #b3261e;
-  color: #fff2c7;
+  background: var(--sfc-seal);
+  color: var(--sfc-gold-soft);
   font-size: 1.05rem;
   letter-spacing: 0;
 }
 
 .wallet-recharge:hover {
-  background: #a9231b;
+  background: var(--sfc-seal-deep);
 }
 
 .account-action {
@@ -293,7 +306,7 @@ onMounted(() => {
   gap: 0.55rem;
   padding: 0.45rem 0.55rem;
   border-radius: 6px;
-  color: #3b1711;
+  color: var(--sfc-ink);
   text-align: left;
   transition:
     background 0.16s ease,
@@ -302,7 +315,7 @@ onMounted(() => {
 
 .account-action:hover {
   background: rgba(179, 38, 30, 0.08);
-  color: #a9231b;
+  color: var(--sfc-cinnabar);
 }
 
 .account-action:disabled {
@@ -311,15 +324,15 @@ onMounted(() => {
 }
 
 .account-action.danger {
-  color: #a9231b;
+  color: var(--sfc-cinnabar);
 }
 
 .dark .account-trigger,
 .dark .account-login {
-  border-color: rgba(255, 219, 142, 0.16);
-  background: rgba(48, 24, 22, 0.76);
-  color: #fff4d6;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.26);
+  border-color: var(--sfc-border-strong);
+  background: var(--sfc-control);
+  color: var(--sfc-gold-soft);
+  box-shadow: var(--sfc-control-shadow);
 }
 
 .dark .account-popover {
@@ -342,28 +355,28 @@ onMounted(() => {
 }
 
 .dark .wallet-value {
-  color: #ffcf72;
-}
-
-.dark .account-card-copy span,
-.dark .account-chevron {
-  color: rgba(255, 244, 214, 0.66);
+  color: var(--sfc-gold);
 }
 
 .dark .account-action {
-  color: #fff4d6;
+  color: var(--sfc-gold-soft);
 }
 
 .dark .account-action:hover {
   background: rgba(255, 219, 142, 0.1);
-  color: #ffdb8e;
+  color: var(--sfc-gold);
 }
 
 .dark .account-action.danger {
-  color: #ff9b8e;
+  color: var(--sfc-cinnabar);
 }
 
 @media (max-width: 640px) {
+  .account-trigger,
+  .account-login {
+    min-height: 2.35rem;
+  }
+
   .account-name,
   .account-chevron {
     display: none;
@@ -371,6 +384,12 @@ onMounted(() => {
 
   .account-trigger {
     padding-right: 0.25rem;
+  }
+
+  .account-login {
+    gap: 0.38rem;
+    padding: 0.42rem 0.82rem;
+    font-size: 1rem;
   }
 }
 </style>

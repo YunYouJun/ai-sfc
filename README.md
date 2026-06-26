@@ -2,7 +2,7 @@
 
 Powered by [云乐坊 YunLeFun](https://www.yunle.fun).
 
-> 登录用户的服务端生成走 [EdgeOne Makers Models AI 网关](https://cloud.tencent.com/document/product/1552/132748)；未登录用户可在「设置」自带兼容 OpenAI 协议的模型接口与 token，浏览器直连、不经过本站服务端。
+> 两条生成链路：**未登录**在「设置」填兼容 OpenAI 协议的模型接口与 token，浏览器直连、token 只存本地、不经服务端；**登录**走云币计费，服务端用你的云乐坊 access_token 直调 [CloudBase](https://tcb.cloud.tencent.com/) 模型（无服务端密钥），登录复用 [www.yunle.fun](https://www.yunle.fun) 账户（基于 [@yunlefun/sso](https://www.npmjs.com/package/@yunlefun/sso) 跨站 SSO）。
 
 - 字体：[MaShanZheng | Google Fonts](https://fonts.google.com/specimen/Ma+Shan+Zheng)
 
@@ -36,11 +36,12 @@ pnpm i
 pnpm dev
 ```
 
-## Functions
+## Deploy
 
-### EdgeOne Functions
+部署在 **EdgeOne Pages**（国内 CDN 加速），自定义域名 <https://ai-sfc.yunle.fun>。
 
-[Pages Functions](https://edgeone.cloud.tencent.com/document/162936866445025280)
+- **SSO 白名单**：登录走 yunle 跨站 SSO，应用 origin 必须在 yunle 的 `NUXT_PUBLIC_SSO_ALLOWED_TARGET_ORIGINS`（当前放行 `https://*.yunle.fun`、`https://*.yunyoujun.cn`）内，否则登录弹窗报「SSO 请求参数无效」。`*.yunle.fun` 子域天然在白名单，故用 `ai-sfc.yunle.fun`（别用未列入的 `*.netlify.app` 等裸域）。本地 dev 端口（`3000`/`5173`/`5174`/`4173` 等）已硬编码在白名单，直接可用。
+- **服务端 API**：EdgeOne Pages 跑 V8 边缘函数、**不运行 Nitro**，故登录扣费的服务端逻辑放在 `functions/api/*`（EdgeOne `onRequest`，与 Nitro `server/api/*` 共用 `packages/server` 的计费/CloudBase 编排）。本地 `pnpm dev` 走 Nitro 路由、`edgeone pages dev` 走 EdgeOne 函数，两者等价。
 
 ## FAQ
 

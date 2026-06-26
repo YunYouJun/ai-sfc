@@ -44,9 +44,12 @@ async function generate() {
     return
   }
 
-  // 登录但云币已用尽：直接引导去充值
+  // 登录但云币已用尽：引导先免费签到领云币（/wallet 页同时支持签到与充值），不直接弹充值
   if (userStore.isAuthenticated && wallet.remaining === 0) {
-    window.open(rechargeUrl.value, '_blank', 'noopener')
+    generateError.value = {
+      statusCode: 402,
+      message: '云币已用完，可去免费签到领取，或充值后继续。',
+    }
     return
   }
 
@@ -125,7 +128,7 @@ watch(() => [Cmd_enter?.value, Ctrl_enter?.value], ([cmdEnter, ctrlEnter]) => {
         :href="rechargeUrl"
         target="_blank"
         rel="noopener noreferrer"
-      >去充值</a>
+      >去免费签到领云币</a>
       <button
         v-else-if="generateError.statusCode === 401"
         type="button"
@@ -177,9 +180,11 @@ watch(() => [Cmd_enter?.value, Ctrl_enter?.value], ([cmdEnter, ctrlEnter]) => {
   border: 1px solid rgba(15, 107, 86, 0.18);
   border-radius: 999px;
   background: rgba(15, 107, 86, 0.08);
-  color: #0f5f4d;
+  color: var(--sfc-jade);
   font-size: 0.85rem;
   font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
   transition:
     transform 0.16s ease,
     background 0.16s ease,
@@ -197,11 +202,11 @@ watch(() => [Cmd_enter?.value, Ctrl_enter?.value], ([cmdEnter, ctrlEnter]) => {
   resize: vertical;
   flex: 1;
   padding: 1rem;
-  border: 1px solid rgba(126, 36, 23, 0.16);
+  border: 1px solid var(--sfc-border);
   border-radius: 8px;
   outline: none;
   background: linear-gradient(180deg, rgba(255, 244, 220, 0.82), rgba(255, 255, 255, 0.72));
-  color: #35140f;
+  color: var(--sfc-ink);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.74);
   line-height: 1.75;
   transition:
@@ -215,7 +220,7 @@ watch(() => [Cmd_enter?.value, Ctrl_enter?.value], ([cmdEnter, ctrlEnter]) => {
 }
 
 .prompt-input::placeholder {
-  color: rgba(53, 20, 15, 0.42);
+  color: color-mix(in srgb, var(--sfc-ink) 42%, transparent);
 }
 
 .setup-notice {
@@ -226,7 +231,7 @@ watch(() => [Cmd_enter?.value, Ctrl_enter?.value], ([cmdEnter, ctrlEnter]) => {
   border: 1px solid rgba(179, 38, 30, 0.2);
   border-radius: 8px;
   background: rgba(179, 38, 30, 0.06);
-  color: #a9231b;
+  color: var(--sfc-cinnabar);
   font-size: 0.85rem;
   line-height: 1.5;
 }
@@ -250,12 +255,13 @@ watch(() => [Cmd_enter?.value, Ctrl_enter?.value], ([cmdEnter, ctrlEnter]) => {
 .generate-error {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.5rem;
   padding: 0.6rem 0.75rem;
   border: 1px solid rgba(179, 38, 30, 0.28);
   border-radius: 8px;
   background: rgba(179, 38, 30, 0.08);
-  color: #a9231b;
+  color: var(--sfc-cinnabar);
   font-size: 0.85rem;
   line-height: 1.5;
 }
@@ -276,14 +282,14 @@ watch(() => [Cmd_enter?.value, Ctrl_enter?.value], ([cmdEnter, ctrlEnter]) => {
   align-items: center;
   padding: 0.2rem 0.7rem;
   border-radius: 999px;
-  background: #b3261e;
-  color: #fff2c7;
+  background: var(--sfc-seal);
+  color: var(--sfc-gold-soft);
   font-weight: 800;
   white-space: nowrap;
 }
 
 .error-cta:hover {
-  background: #a9231b;
+  background: var(--sfc-seal-deep);
 }
 
 .dark .generate-error {
@@ -306,7 +312,7 @@ watch(() => [Cmd_enter?.value, Ctrl_enter?.value], ([cmdEnter, ctrlEnter]) => {
 }
 
 .counter {
-  color: rgba(53, 20, 15, 0.54);
+  color: var(--sfc-ink-muted);
   font-size: 0.85rem;
   font-weight: 800;
 }
@@ -315,13 +321,13 @@ watch(() => [Cmd_enter?.value, Ctrl_enter?.value], ([cmdEnter, ctrlEnter]) => {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  color: #0f6b56;
+  color: var(--sfc-jade);
   font-size: 0.82rem;
   font-weight: 800;
 }
 
 .dark .balance-hint {
-  color: #69d3ad;
+  color: var(--sfc-jade);
 }
 
 .generate-button {
@@ -334,8 +340,8 @@ watch(() => [Cmd_enter?.value, Ctrl_enter?.value], ([cmdEnter, ctrlEnter]) => {
   padding: 0.55rem 1.2rem;
   border: 1px solid rgba(255, 220, 137, 0.54);
   border-radius: 8px;
-  background: #b3261e;
-  color: #fff2c7;
+  background: var(--sfc-seal);
+  color: var(--sfc-gold-soft);
   box-shadow: 0 16px 36px rgba(179, 38, 30, 0.24);
   font-size: 1.75rem;
   transition:
@@ -362,13 +368,13 @@ watch(() => [Cmd_enter?.value, Ctrl_enter?.value], ([cmdEnter, ctrlEnter]) => {
 .dark .preset-chip {
   border-color: rgba(105, 211, 173, 0.18);
   background: rgba(105, 211, 173, 0.1);
-  color: #9be7ca;
+  color: var(--sfc-jade);
 }
 
 .dark .prompt-input {
   border-color: rgba(255, 219, 142, 0.15);
   background: rgba(25, 17, 18, 0.72);
-  color: #fff3d8;
+  color: var(--sfc-ink);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
@@ -377,9 +383,8 @@ watch(() => [Cmd_enter?.value, Ctrl_enter?.value], ([cmdEnter, ctrlEnter]) => {
   box-shadow: 0 0 0 3px rgba(255, 207, 114, 0.12);
 }
 
-.dark .prompt-input::placeholder,
-.dark .counter {
-  color: rgba(255, 243, 216, 0.46);
+.dark .prompt-input::placeholder {
+  color: color-mix(in srgb, var(--sfc-ink) 46%, transparent);
 }
 
 @media (max-width: 640px) {
@@ -390,6 +395,36 @@ watch(() => [Cmd_enter?.value, Ctrl_enter?.value], ([cmdEnter, ctrlEnter]) => {
 
   .generate-button {
     width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .prompt-composer {
+    gap: 0.85rem;
+  }
+
+  .preset-row {
+    gap: 0.4rem;
+  }
+
+  .preset-chip {
+    min-height: 1.9rem;
+    padding: 0.32rem 0.56rem;
+    font-size: 0.78rem;
+  }
+
+  .prompt-input {
+    min-height: 8rem;
+    padding: 0.85rem;
+  }
+
+  .composer-meta {
+    justify-content: space-between;
+  }
+
+  .generate-button {
+    min-height: 2.8rem;
+    font-size: 1.45rem;
   }
 }
 </style>

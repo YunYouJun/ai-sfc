@@ -390,10 +390,10 @@ async function copyText() {
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.5rem 0.65rem 0.5rem 0.85rem;
-  border: 1px solid rgba(126, 36, 23, 0.12);
+  border: 1px solid var(--sfc-border);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.5);
-  color: #35140f;
+  background: color-mix(in srgb, var(--sfc-control) 70%, transparent);
+  color: var(--sfc-ink);
   font-size: 1.15rem;
   font-weight: 400;
   letter-spacing: 0;
@@ -427,7 +427,7 @@ async function copyText() {
 }
 
 .switch-root[data-state='checked'] {
-  background: #b3261e;
+  background: var(--sfc-cinnabar);
   box-shadow:
     inset 0 0 0 1px rgba(255, 225, 143, 0.28),
     0 2px 6px rgba(179, 38, 30, 0.22);
@@ -485,12 +485,6 @@ async function copyText() {
   --sfc-fu-ink: #f2d98a;
   --sfc-couplet-border: #c99a3a;
   --sfc-couplet-inset: inset 0 0 0 2px rgba(240, 217, 138, 0.32);
-}
-
-.dark .switch-row {
-  border-color: rgba(255, 219, 142, 0.13);
-  background: rgba(25, 17, 18, 0.52);
-  color: #fff3d8;
 }
 
 .dark .switch-root {

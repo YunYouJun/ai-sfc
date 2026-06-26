@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { appName } from '~/constants'
-import 'wc-github-corners'
 
 useHead({
   title: appName,
@@ -8,7 +7,6 @@ useHead({
 </script>
 
 <template>
-  <github-corners repo="YunYouJun/ai-sfc" blank />
   <VitePwaManifest />
   <NuxtLayout>
     <NuxtPage />
@@ -25,7 +23,7 @@ body,
 }
 
 html.dark {
-  background: #222;
-  color: white;
+  background: #160e0f;
+  color: #f8e9c6;
 }
 </style>
