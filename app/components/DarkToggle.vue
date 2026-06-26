@@ -24,8 +24,8 @@ function toggleDark() {
 
 <style scoped>
 .theme-toggle {
-  width: 2.5rem;
-  height: 2.5rem;
+  width: var(--sfc-ctrl-size);
+  height: var(--sfc-ctrl-size);
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -58,12 +58,5 @@ function toggleDark() {
   background: var(--sfc-control);
   color: var(--sfc-gold-soft);
   box-shadow: var(--sfc-control-shadow);
-}
-
-@media (max-width: 640px) {
-  .theme-toggle {
-    width: 2.35rem;
-    height: 2.35rem;
-  }
 }
 </style>

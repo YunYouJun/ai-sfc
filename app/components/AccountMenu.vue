@@ -113,7 +113,7 @@ onMounted(() => {
 
 .account-trigger,
 .account-login {
-  min-height: 2.5rem;
+  min-height: var(--sfc-ctrl-size);
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -131,7 +131,8 @@ onMounted(() => {
 }
 
 .account-trigger {
-  padding: 0.25rem 0.75rem 0.25rem 0.25rem;
+  height: var(--sfc-ctrl-size);
+  padding: 0 0.7rem 0 0.25rem;
 }
 
 .account-login {
@@ -372,18 +373,17 @@ onMounted(() => {
 }
 
 @media (max-width: 640px) {
-  .account-trigger,
-  .account-login {
-    min-height: 2.35rem;
-  }
-
   .account-name,
   .account-chevron {
     display: none;
   }
 
+  /* 折叠成与图标钮一致的圆：固定为统一控件尺寸、头像居中留细边框 */
   .account-trigger {
-    padding-right: 0.25rem;
+    width: var(--sfc-ctrl-size);
+    height: var(--sfc-ctrl-size);
+    padding: 0;
+    justify-content: center;
   }
 
   .account-login {

@@ -140,8 +140,8 @@ watch(visibility, (state) => {
 }
 
 .header-icon-button {
-  width: 2.5rem;
-  height: 2.5rem;
+  width: var(--sfc-ctrl-size);
+  height: var(--sfc-ctrl-size);
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -211,11 +211,6 @@ watch(visibility, (state) => {
 
   .header-actions {
     gap: 0.4rem;
-  }
-
-  .header-icon-button {
-    width: 2.35rem;
-    height: 2.35rem;
   }
 }
 

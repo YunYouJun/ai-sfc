@@ -18,6 +18,14 @@
   --sfc-control: rgba(255, 255, 255, 0.76);
   --sfc-shadow: 0 22px 70px rgba(97, 29, 18, 0.12);
   --sfc-control-shadow: 0 12px 32px rgba(97, 29, 18, 0.1);
+  /* 顶栏控件统一尺寸（图标钮 / 主题钮 / 头像 / 登录共用，移动端下方变量收窄） */
+  --sfc-ctrl-size: 2.5rem;
+}
+
+@media (max-width: 640px) {
+  :root {
+    --sfc-ctrl-size: 2.35rem;
+  }
 }
 
 .dark {
