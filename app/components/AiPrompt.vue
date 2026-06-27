@@ -7,6 +7,7 @@ const app = useAppStore()
 const aiSettings = useAiSettingsStore()
 const userStore = useUserStore()
 const wallet = useWalletStore()
+const coupletHistory = useCoupletHistoryStore()
 
 /** 未登录且未配置自定义 token：既不能走服务端云币，也不能浏览器直连 */
 const needsSetup = computed(() => !userStore.isAuthenticated && !aiSettings.hasToken)
@@ -101,6 +102,8 @@ async function generate() {
       if (res.balance !== undefined)
         wallet.setBalance(res.balance)
       await app.setCoupletsData(res.couplets)
+      // 登录用户：异步存入「我的春联」历史（save 内部已判登录态，失败静默、不阻断）
+      coupletHistory.save(res.couplets, app.prompt)
     }
     else {
       generateError.value = res

@@ -37,6 +37,9 @@ watch(visibility, (state) => {
         >
           <span class="i-ri-github-fill" />
         </a>
+        <NuxtLink class="header-icon-button" to="/history" aria-label="我的春联" title="我的春联">
+          <span class="i-ri-bookmark-line" />
+        </NuxtLink>
         <NuxtLink class="header-icon-button" to="/settings" aria-label="模型设置">
           <span class="i-ri-settings-3-line" />
         </NuxtLink>
