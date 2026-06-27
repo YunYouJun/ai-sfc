@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { SprintFestivalCouplets } from '~~/packages/ai/src'
+import type { CoupletToneAnalysis } from '~~/packages/ai/src/tones'
 import { useClipboard } from '@vueuse/core'
 import { downloadDataUrlAsImage } from '@yunlefun/utils'
 import { copyBlobToClipboard } from 'copy-image-clipboard'
@@ -17,6 +18,23 @@ const sfcContainer = useTemplateRef<HTMLElement>('sfcContainer')
 
 const upperCoupletChars = computed(() => [...props.coupletsData['上联']])
 const lowerCoupletChars = computed(() => [...props.coupletsData['下联']])
+
+/** 平仄分析（按需动态加载 pinyin-pro，避免进主 bundle；标注在截图区之外，不污染下载图片） */
+const showTones = ref(false)
+const toneAnalysis = shallowRef<CoupletToneAnalysis | null>(null)
+let analyzeCoupletFn: ((上联: string, 下联: string) => CoupletToneAnalysis) | null = null
+
+async function runToneAnalysis() {
+  if (!showTones.value) {
+    toneAnalysis.value = null
+    return
+  }
+  if (!analyzeCoupletFn)
+    analyzeCoupletFn = (await import('~~/packages/ai/src/tones')).analyzeCouplet
+  toneAnalysis.value = analyzeCoupletFn(props.coupletsData['上联'], props.coupletsData['下联'])
+}
+
+watch([showTones, () => props.coupletsData], runToneAnalysis)
 
 /**
  * Download image
@@ -208,6 +226,40 @@ async function copyText() {
         >
           <SwitchThumb class="switch-thumb" />
         </SwitchRoot>
+      </div>
+
+      <div class="switch-row">
+        <label class="switch-label" for="show-tones">显示平仄</label>
+        <SwitchRoot
+          id="show-tones"
+          v-model="showTones"
+          class="switch-root"
+        >
+          <SwitchThumb class="switch-thumb" />
+        </SwitchRoot>
+      </div>
+    </div>
+
+    <div v-if="showTones && toneAnalysis" class="tone-panel">
+      <div
+        v-for="row in [{ label: '上联', chars: toneAnalysis.上联 }, { label: '下联', chars: toneAnalysis.下联 }]"
+        :key="row.label"
+        class="tone-row"
+      >
+        <span class="tone-row-label">{{ row.label }}</span>
+        <span
+          v-for="(c, i) in row.chars"
+          :key="`${row.label}-${i}`"
+          class="tone-cell"
+          :class="{ conflict: toneAnalysis.出律位置.includes(i) }"
+        >
+          <span class="tone-cell-char">{{ c.char }}</span>
+          <span class="tone-cell-mark" :data-tone="c.tone || ''">{{ c.tone || '·' }}</span>
+        </span>
+      </div>
+      <div class="tone-conclusion" :class="{ ok: toneAnalysis.合律 }">
+        <span :class="toneAnalysis.合律 ? 'i-ri-checkbox-circle-line' : 'i-ri-error-warning-line'" />
+        <span>{{ toneAnalysis.结论 }}</span>
       </div>
     </div>
 
@@ -464,6 +516,73 @@ async function copyText() {
 
 .action-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* 平仄分析面板（在截图区之外，不进下载图片） */
+.tone-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--sfc-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--sfc-control) 60%, transparent);
+}
+
+.tone-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.tone-row-label {
+  margin-right: 0.3rem;
+  color: var(--sfc-ink-muted);
+  font-size: 0.85rem;
+  line-height: 2;
+}
+
+.tone-cell {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 1.4rem;
+  padding: 0.05rem 0.1rem;
+  border-radius: 6px;
+}
+
+.tone-cell.conflict {
+  background: rgba(179, 38, 30, 0.12);
+}
+
+.tone-cell-char {
+  color: var(--sfc-ink);
+  font-size: 1.05rem;
+  line-height: 1.3;
+}
+
+.tone-cell-mark {
+  color: var(--sfc-ink-muted);
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.tone-cell-mark[data-tone='仄'] {
+  color: var(--sfc-cinnabar);
+}
+
+.tone-conclusion {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--sfc-cinnabar);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.tone-conclusion.ok {
+  color: var(--sfc-jade);
 }
 
 /* 洒金宣纸：红底极淡同色暗纹、黑墨字、无边框直角 */

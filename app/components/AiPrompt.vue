@@ -24,11 +24,41 @@ const promptPresets = [
 ]
 
 const promptLength = computed(() => app.prompt.length)
-const canGenerate = computed(() => !app.loading && app.prompt.trim().length > 0)
+
+/** 藏头联：开关 + 上下联首字（两字）；留空或未开启则普通生成 */
+const acrosticEnabled = ref(false)
+const acrostic = ref('')
+
+/** 生成冷却：上次生成后短暂禁用按钮，防连点/误触刷云币（纯前端） */
+const cooldown = ref(false)
+let cooldownTimer: ReturnType<typeof setTimeout> | undefined
+
+const canGenerate = computed(() => !app.loading && !cooldown.value && app.prompt.trim().length > 0)
 
 function usePreset(preset: string) {
   app.prompt = preset
 }
+
+/** 把藏头要求拼进给模型的提示词；两条生成路径都只传字符串，故无需改服务端签名 */
+function buildEffectivePrompt() {
+  const base = app.prompt.trim()
+  const chars = acrostic.value.trim().slice(0, 2)
+  if (acrosticEnabled.value && chars.length === 2)
+    return `${base}\n（藏头要求：上联第一个字必须是「${chars[0]}」，下联第一个字必须是「${chars[1]}」，其余顺其自然。）`
+  return base
+}
+
+function startCooldown(ms = 1500) {
+  cooldown.value = true
+  if (cooldownTimer)
+    clearTimeout(cooldownTimer)
+  cooldownTimer = setTimeout(() => (cooldown.value = false), ms)
+}
+
+onBeforeUnmount(() => {
+  if (cooldownTimer)
+    clearTimeout(cooldownTimer)
+})
 
 /**
  * generate sfc 春联
@@ -56,15 +86,16 @@ async function generate() {
   generateError.value = null
   app.loading = true
   try {
+    const prompt = buildEffectivePrompt()
     const res = userStore.isAuthenticated
       // 登录 → 服务端用云币生成（token 仅作鉴权，模型 key 在服务端）
       ? await apiGenerate({
-          prompt: app.prompt,
+          prompt,
           token: await userStore.getAccessToken(),
           bizId: crypto.randomUUID(),
         })
       // 未登录但有 token → 浏览器直连，token 不经过服务端
-      : await generateCoupletsDirect(app.prompt, aiSettings.resolvedProvider)
+      : await generateCoupletsDirect(prompt, aiSettings.resolvedProvider)
 
     if (res.ok) {
       if (res.balance !== undefined)
@@ -77,6 +108,7 @@ async function generate() {
   }
   finally {
     app.loading = false
+    startCooldown()
   }
 }
 
@@ -111,6 +143,23 @@ watch(() => [Cmd_enter?.value, Ctrl_enter?.value], ([cmdEnter, ctrlEnter]) => {
       :maxlength="config.inputMaxLength"
       rows="3"
     />
+
+    <div class="acrostic-row">
+      <label class="acrostic-toggle">
+        <input v-model="acrosticEnabled" type="checkbox">
+        <span>藏头联</span>
+      </label>
+      <template v-if="acrosticEnabled">
+        <input
+          v-model="acrostic"
+          class="acrostic-input"
+          maxlength="2"
+          placeholder="两字"
+          aria-label="藏头：上下联首字（两字）"
+        >
+        <span class="acrostic-hint">分别作上联、下联的首字</span>
+      </template>
+    </div>
 
     <div v-if="needsSetup" class="setup-notice">
       <span class="i-ri-information-line" />
@@ -221,6 +270,58 @@ watch(() => [Cmd_enter?.value, Ctrl_enter?.value], ([cmdEnter, ctrlEnter]) => {
 
 .prompt-input::placeholder {
   color: color-mix(in srgb, var(--sfc-ink) 42%, transparent);
+}
+
+.acrostic-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: -0.35rem;
+}
+
+.acrostic-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--sfc-ink-muted);
+  font-size: 0.85rem;
+  font-weight: 800;
+  cursor: pointer;
+  user-select: none;
+}
+
+.acrostic-toggle input {
+  accent-color: var(--sfc-seal);
+}
+
+.acrostic-input {
+  width: 4.5rem;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--sfc-border);
+  border-radius: 8px;
+  outline: none;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--sfc-ink);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.15em;
+}
+
+.acrostic-input:focus {
+  border-color: rgba(179, 38, 30, 0.46);
+}
+
+.acrostic-hint {
+  color: var(--sfc-ink-muted);
+  font-size: 0.78rem;
+}
+
+.dark .acrostic-input {
+  border-color: rgba(255, 219, 142, 0.15);
+  background: rgba(25, 17, 18, 0.72);
+  color: var(--sfc-ink);
 }
 
 .setup-notice {
