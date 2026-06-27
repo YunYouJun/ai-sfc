@@ -1,3 +1,4 @@
+import process from 'node:process'
 import { pwa } from './app/config/pwa'
 import { appDescription } from './app/constants/index'
 
@@ -98,6 +99,10 @@ export default defineNuxtConfig({
         target: 'esnext',
       },
     },
+    // CF Pages（CF_PAGES=1）用 static preset：纯静态产物、不生成 _worker.js，
+    // 避免与根目录 functions/ 冲突；/api 由 functions/ 作为 CF Pages Functions 承载。
+    // EdgeOne 不设 CF_PAGES，preset 为 undefined（自动探测），不受影响。
+    preset: process.env.CF_PAGES ? 'static' : undefined,
     prerender: {
       crawlLinks: false,
       routes: ['/'],
