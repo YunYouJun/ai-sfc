@@ -23,7 +23,6 @@ watch(visibility, (state) => {
         <span class="brand-mark font-zmx" aria-hidden="true">春</span>
         <span class="brand-copy">
           <strong>AI 春联</strong>
-          <span>YunLeFun</span>
         </span>
       </NuxtLink>
 
@@ -124,12 +123,6 @@ watch(visibility, (state) => {
   line-height: 1.1;
 }
 
-.brand-copy span {
-  color: var(--sfc-ink-muted);
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
 .header-actions {
   min-width: 0;
   flex: 0 0 auto;
@@ -197,10 +190,6 @@ watch(visibility, (state) => {
 
   .brand-lockup {
     gap: 0.5rem;
-  }
-
-  .brand-copy span {
-    display: none;
   }
 
   .brand-mark {
