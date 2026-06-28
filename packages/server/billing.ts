@@ -1,36 +1,45 @@
-import type { SprintFestivalCouplets } from '../ai/src/couplets'
+import type { CoupletMessage, SprintFestivalCouplets } from '../ai/src/couplets'
+import { buildCoupletMessages, parseCoupletContent } from '../ai/src/couplets'
+
+/** ai-gateway 返回的通用结果（结构与 cloudbase.ts 的 GatewayChatResult 一致；此处自定义以与传输层解耦） */
+export type PaidChatOutcome
+  = | { ok: true, content: string, balance: number, deduped: boolean }
+    | { ok: false, code: string, message: string }
 
 export interface PaidGenerationDeps {
-  /** 查云币余额（顺便验证 token：无效应抛错） */
-  getBalance: (token: string) => Promise<number>
-  /** 生成春联（无法解析返回 undefined，或抛错） */
-  generate: (token: string, prompt: string) => Promise<SprintFestivalCouplets | undefined>
-  /** 扣云币（bizId 幂等） */
-  deduct: (token: string, params: { amount: number, bizId: string }) => Promise<{ balance: number }>
+  /**
+   * 单次原子业务调用：把已构造的 messages 交给 yunle ai-gateway，由网关完成
+   * 「验登录 + 余额校验 + 受控调 AI + 扣费」，回 content/balance。
+   */
+  chat: (token: string, messages: CoupletMessage[], bizId: string) => Promise<PaidChatOutcome>
 }
 
 export interface PaidGenerationInput {
   token: string | null
   prompt: string
   bizId: string
-  cost: number
 }
 
 export type PaidGenerationResult
   = | { ok: true, couplets: SprintFestivalCouplets, balance: number }
-    | { ok: false, statusCode: 401 | 402 | 502, message: string }
+    | { ok: false, statusCode: 400 | 401 | 402 | 502, message: string }
+
+/** ai-gateway 业务码 → HTTP 状态码 */
+const CODE_STATUS: Record<string, 400 | 401 | 402 | 502> = {
+  unauthorized: 401,
+  insufficient: 402,
+  ai_failed: 502,
+  bad_request: 400,
+  unknown_app: 400,
+}
 
 /**
- * 登录扣费生成编排：查余额（验证 token）→ 余额足够 → 生成 → 成功后扣（bizId 幂等）。
+ * 登录扣费生成编排（解耦版）：构造春联 messages → 交 yunle ai-gateway 单次原子完成
+ * 「验登录 + 扣费 + 受控调 AI」→ 把返回文本解析为春联。
  *
- * 生成失败不扣费（用户不为失败付费）；扣费本身失败不浪费已生成结果，余额回退本地估算。
- * 与 CloudBase / h3 解耦（依赖注入），便于单测。
- *
- * ⚠️ 荣誉计费（已知边界，团队接受）：0 密钥设计下服务端用「用户自己的」access_token 调
- * CloudBase 模型组，而该 token 在用户浏览器里、本就能直打 `/v1/ai/<group>/chat/completions`
- * 免费生成、绕过此处扣费——扣云币是「应用内/服务端编排」级约束，非密码学强制。利用门槛=需
- * 有 yunle 账号 + 知道组名（本仓库未泄露组名，它在私有 runtimeConfig）。春联场景低风险故接受；
- * 若要不可绕过，须把生成挪进 yunle 付费云函数并锁模型组（端用户 token 禁直调），见架构记忆。
+ * 与旧版「查余额 → 用用户 token 直调 AI → 扣费」三步可绕过不同：计费与 AI 调用都在 yunle
+ * 服务端（端用户 token 不能直打 AI 网关），从根上堵白嫖洞。本函数只做春联域的
+ * 「构造 / 解析 / 错误映射」，与 CloudBase / h3 解耦（依赖注入），便于单测。
  */
 export async function runPaidGeneration(
   input: PaidGenerationInput,
@@ -39,37 +48,36 @@ export async function runPaidGeneration(
   if (!input.token)
     return { ok: false, statusCode: 401, message: '请先登录后再生成。' }
 
-  // 查余额（顺便验证 token：无效则抛错）
-  let balance: number
+  let outcome: PaidChatOutcome
   try {
-    balance = await deps.getBalance(input.token)
+    outcome = await deps.chat(input.token, buildCoupletMessages(input.prompt), input.bizId)
   }
-  catch {
-    return { ok: false, statusCode: 401, message: '登录态已失效，请重新登录。' }
+  catch (error) {
+    // 传输层异常：鉴权类（网关拒 token）→ 401，其余 → 502
+    return isAuthError(error)
+      ? { ok: false, statusCode: 401, message: '登录态已失效，请重新登录。' }
+      : { ok: false, statusCode: 502, message: '生成服务暂时不可用，请稍后再试。' }
   }
 
-  if (balance < input.cost)
-    return { ok: false, statusCode: 402, message: '云币余额不足，请充值后再生成。' }
+  if (!outcome.ok)
+    return { ok: false, statusCode: CODE_STATUS[outcome.code] ?? 502, message: outcome.message }
 
-  // 生成
   let couplets: SprintFestivalCouplets | undefined
   try {
-    couplets = await deps.generate(input.token, input.prompt)
+    couplets = parseCoupletContent(outcome.content)
   }
   catch {
     couplets = undefined
   }
   if (!couplets)
-    return { ok: false, statusCode: 502, message: '模型生成失败，请重试（未扣云币）。' }
+    return { ok: false, statusCode: 502, message: '模型返回内容无法解析为春联，请重试。' }
 
-  // 生成成功后扣费；扣费异常不浪费已生成结果，余额回退本地估算（下次刷新校准）
-  let nextBalance = balance - input.cost
-  try {
-    nextBalance = (await deps.deduct(input.token, { amount: input.cost, bizId: input.bizId })).balance
-  }
-  catch {
-    // 已生成、扣费失败：返回估算余额
-  }
+  return { ok: true, couplets, balance: outcome.balance }
+}
 
-  return { ok: true, couplets, balance: nextBalance }
+/** ofetch / fetch 异常是否为鉴权类（401/403） */
+function isAuthError(error: unknown): boolean {
+  const status = (error as { status?: number, statusCode?: number })?.status
+    ?? (error as { statusCode?: number })?.statusCode
+  return status === 401 || status === 403
 }

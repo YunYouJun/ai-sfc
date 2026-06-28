@@ -1,14 +1,16 @@
 import { readProviderString } from '../../app/utils/ai-provider'
 import { parseBearerToken } from '../../packages/server/bearer'
 import { runPaidGeneration } from '../../packages/server/billing'
-import { deductCloudbaseCoin, generateCoupletsViaCloudbase, getCloudbaseBalance } from '../../packages/server/cloudbase'
+import { aiChatViaGateway } from '../../packages/server/cloudbase'
 
 /**
  * EdgeOne Pages Function：登录扣云币生成春联（POST /api/generate）。
  *
  * 线上部署在 EdgeOne Pages，不跑 Nitro，故服务端逻辑以 Web 标准 onRequest 落地；
- * 与 Nitro `server/api/generate.ts`（本地 `pnpm dev` 用）共用 `packages/server` 的计费/CloudBase 编排。
- * 用「用户自己的」CloudBase access_token HTTP 直调，0 服务端密钥。env 缺省即用默认值，无需在控制台配置。
+ * 与 Nitro `server/api/generate.ts`（本地 `pnpm dev` 用）共用 `packages/server` 的计费编排。
+ *
+ * 生成统一经 yunle ai-gateway 云函数（验登录 + 扣费 + 管理员身份调 AI），本侧 0 服务端密钥、
+ * 也不再用用户 token 直调 AI（已堵白嫖洞）。模型 / 计价由 yunle 服务端按 appId 决定，本侧不配。
  */
 interface EdgeContext {
   request: Request
@@ -41,20 +43,12 @@ export async function onRequest({ request, env }: EdgeContext): Promise<Response
     return json({ message: '请输入春联提示词。' }, 400)
 
   const envId = readProviderString(env.NUXT_PUBLIC_CLOUDBASE_ENV_ID) || 'yunlefun-8g7ybcxc7345c490'
-  const group = readProviderString(env.NUXT_CLOUDBASE_MODEL_GROUP) || 'custom-deepseek-open'
-  const model = readProviderString(env.NUXT_CLOUDBASE_MODEL) || 'deepseek-v4-flash'
-  const cost = Math.max(1, Math.round(Number(env.NUXT_COST_PER_GENERATION) || 1))
-
   const token = parseBearerToken(request.headers.get('authorization'))
   const bizId = readProviderString(body.bizId) || crypto.randomUUID()
 
   const result = await runPaidGeneration(
-    { token, prompt, bizId, cost },
-    {
-      getBalance: t => getCloudbaseBalance(envId, t),
-      generate: (t, input) => generateCoupletsViaCloudbase(envId, t, group, model, input),
-      deduct: (t, params) => deductCloudbaseCoin(envId, t, { appId: APP_ID, amount: params.amount, bizId: params.bizId }),
-    },
+    { token, prompt, bizId },
+    { chat: (t, messages, id) => aiChatViaGateway(envId, t, { appId: APP_ID, messages, bizId: id }) },
   )
 
   if (!result.ok)
