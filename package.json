@@ -22,8 +22,8 @@
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
-    "@cloudbase/js-sdk": "^3.4.6",
-    "@yunlefun/sso": "^0.1.0",
+    "@cloudbase/js-sdk": "^3.6.3",
+    "@yunlefun/sso": "^0.5.0",
     "ofetch": "1.5.1",
     "pinyin-pro": "^3.28.1"
   },

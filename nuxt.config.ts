@@ -74,7 +74,11 @@ export default defineNuxtConfig({
     openaiModel: 'deepseek-chat',
     public: {
       cloudbaseEnvId: 'yunlefun-8g7ybcxc7345c490',
-      yunleSsoOrigin: 'https://www.yunle.fun',
+      yunleSsoClientId: process.env.NUXT_PUBLIC_YUNLE_SSO_CLIENT_ID || 'ai-sfc-web',
+      yunleSsoExchangeUrl: process.env.NUXT_PUBLIC_YUNLE_SSO_EXCHANGE_URL || 'https://api.yunle.fun/sso-ticket',
+      yunleSsoOrigin: process.env.NUXT_PUBLIC_YUNLE_SSO_ORIGIN || 'https://www.yunle.fun',
+      // 留空时使用当前 origin 的根路径；该精确 URI 仍必须登记在 Provider Client Registry。
+      yunleSsoRedirectUri: process.env.NUXT_PUBLIC_YUNLE_SSO_REDIRECT_URI || '',
     },
   },
 

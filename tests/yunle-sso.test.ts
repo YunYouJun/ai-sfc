@@ -35,6 +35,28 @@ describe('yunle sso helpers', () => {
     expect(mapYunleSsoSession({ user: { user_metadata: { username: 'yyj' } } })).toBeNull()
   })
 
+  it('应该兼容 CloudBase v3 session user', () => {
+    expect(mapYunleSsoSession({
+      user: {
+        uid: 'user-v3',
+        username: 'yyj',
+        nickName: '云游君',
+        picture: 'https://example.com/v3-avatar.png',
+        phone_number: '13800000000',
+        providers: [{ id: 'github' }],
+      },
+    })).toEqual({
+      id: 'user-v3',
+      login: 'yyj',
+      nickname: '云游君',
+      avatar: 'https://example.com/v3-avatar.png',
+      email: '',
+      phone: '13800000000',
+      role: 'USER',
+      providers: ['github'],
+    })
+  })
+
   it('应该去除 SSO origin 末尾斜杠', () => {
     expect(trimTrailingSlash('https://www.yunle.fun///')).toBe('https://www.yunle.fun')
   })

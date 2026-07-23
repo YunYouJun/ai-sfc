@@ -4,11 +4,20 @@ export const defaultYunleSsoOrigin = 'https://www.yunle.fun'
 
 export interface YunleSessionUser {
   id?: string
+  uid?: string
+  sub?: string
+  username?: string
+  name?: string
+  nickName?: string
+  picture?: string
   email?: string | null
   phone?: string | null
+  phone_number?: string | null
   role?: string[] | string
   created_at?: string
   updated_at?: string
+  providers?: Array<string | { id?: string }>
+  is_anonymous?: boolean
   user_metadata?: Record<string, unknown>
   app_metadata?: {
     providers?: string[]
@@ -50,23 +59,30 @@ export function readMetadataString(metadata: Record<string, unknown> | undefined
 /** 把 CloudBase session.user 映射为本地展示用户（头像/昵称取自 user_metadata） */
 export function mapYunleSsoSession(session?: YunleSsoSession): YunleUser | null {
   const source = session?.user
-  if (!source?.id)
+  const id = readString(source?.id) || readString(source?.uid) || readString(source?.sub)
+  if (!source || !id)
     return null
 
   const metadata = source.user_metadata
-  const login = readMetadataString(metadata, ['username', 'login'])
+  const login = readMetadataString(metadata, ['username', 'login']) || readString(source.username)
   const nickname = readMetadataString(metadata, ['nickName', 'name', 'username'])
-  const avatar = readMetadataString(metadata, ['avatarUrl', 'picture', 'avatar'])
+    || readString(source.nickName)
+    || readString(source.name)
+    || login
+  const avatar = readMetadataString(metadata, ['avatarUrl', 'picture', 'avatar']) || readString(source.picture)
   const role = Array.isArray(source.role) ? source.role[0] : readString(source.role)
+  const providers = source.app_metadata?.providers
+    || source.providers?.map(provider => typeof provider === 'string' ? provider : readString(provider.id)).filter(Boolean)
+    || []
 
   return {
-    id: source.id,
+    id,
     login,
     nickname,
     avatar,
     email: readString(source.email),
-    phone: readString(source.phone),
+    phone: readString(source.phone) || readString(source.phone_number),
     role: role || 'USER',
-    providers: source.app_metadata?.providers || [],
+    providers,
   }
 }

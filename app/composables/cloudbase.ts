@@ -22,7 +22,7 @@ export function useCloudbaseApp() {
   return cachedApp
 }
 
-/** CloudBase 前端 auth 单例（仅浏览器）。@yunlefun/sso 的 setSession / token 自动续期都靠它。 */
+/** CloudBase 前端 auth 单例（仅浏览器）。SSO custom ticket 登录与 access token 自动续期都靠它。 */
 export function useCloudbaseAuth() {
   if (!import.meta.client)
     return null

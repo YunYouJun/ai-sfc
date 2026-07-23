@@ -1,7 +1,12 @@
-import type { SsoFailureReason } from '@yunlefun/sso/protocol'
+import type { SsoFailureReason } from '@yunlefun/sso'
 import type { YunleSessionUser, YunleUser } from '~/utils/yunle-sso'
 import { useStorage } from '@vueuse/core'
-import { signInWithSso } from '@yunlefun/sso'
+import {
+  adoptSsoCode,
+  consumeSsoRedirect,
+  hasSsoRedirectResult,
+  startSsoRedirect,
+} from '@yunlefun/sso'
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import {
   defaultYunleSsoOrigin,
@@ -16,14 +21,14 @@ type AuthStatus = 'idle' | 'checking' | 'authenticated' | 'anonymous' | 'error'
 
 function ssoFailMessage(reason: SsoFailureReason): string {
   switch (reason) {
-    case 'popup_blocked':
-      return '浏览器拦截了登录窗口，请允许弹窗后重试'
-    case 'closed':
-      return '已取消登录'
-    case 'timeout':
-      return '云乐坊账号同步超时'
-    default:
-      return '云乐坊账号同步失败'
+    case 'access_denied':
+      return '已取消云乐坊登录授权'
+    case 'invalid_request':
+      return '登录请求已失效，请重试'
+    case 'not_authenticated':
+      return '尚未登录云乐坊'
+    case 'server_error':
+      return '云乐坊登录服务暂时不可用，请稍后重试'
   }
 }
 
@@ -33,11 +38,23 @@ export const useUserStore = defineStore('user', () => {
   const lastSyncedAt = useStorage(`${ns}:yunle-user-synced-at`, 0)
   const status = shallowRef<AuthStatus>(user.value ? 'authenticated' : 'idle')
   const error = shallowRef('')
-  let pendingSilent: Promise<YunleUser | null> | null = null
+  let pendingSync: Promise<YunleUser | null> | null = null
 
   const ssoOrigin = computed(() =>
     trimTrailingSlash(readString(runtimeConfig.public.yunleSsoOrigin) || defaultYunleSsoOrigin),
   )
+  const ssoClientId = computed(() =>
+    readString(runtimeConfig.public.yunleSsoClientId) || 'ai-sfc-web',
+  )
+  const ssoExchangeUrl = computed(() =>
+    readString(runtimeConfig.public.yunleSsoExchangeUrl) || 'https://api.yunle.fun/sso-ticket',
+  )
+  const ssoRedirectUri = computed(() => {
+    const configured = readString(runtimeConfig.public.yunleSsoRedirectUri)
+    if (configured)
+      return configured
+    return import.meta.client ? new URL('/', window.location.origin).toString() : ''
+  })
   const loading = computed(() => status.value === 'checking')
   const isAuthenticated = computed(() => !!user.value)
   const displayName = computed(() => user.value?.nickname || user.value?.login || '云乐坊用户')
@@ -55,69 +72,110 @@ export const useUserStore = defineStore('user', () => {
     return new URL(path, `${ssoOrigin.value}/`).toString()
   }
 
-  /** 用 @yunlefun/sso 发起登录（silent 静默 / interactive 弹窗），成功后由它注入 CloudBase 登录态 */
-  async function runSso(mode: 'silent' | 'interactive'): Promise<YunleUser | null> {
+  function clearUser(nextStatus: AuthStatus) {
+    user.value = null
+    lastSyncedAt.value = 0
+    status.value = nextStatus
+  }
+
+  async function restoreCloudbaseSession(): Promise<YunleUser | null> {
     const auth = useCloudbaseAuth()
     if (!auth)
       return user.value
 
+    const { data, error: sessionError } = await auth.getSession()
+    const session = data?.session
+    if (sessionError || !session || session.user?.is_anonymous) {
+      clearUser('anonymous')
+      return null
+    }
+
+    const nextUser = mapYunleSsoSession({
+      user: session.user as YunleSessionUser,
+    })
+    if (!nextUser) {
+      clearUser('error')
+      error.value = '云乐坊账号信息不完整'
+      return null
+    }
+
+    user.value = nextUser
+    lastSyncedAt.value = Date.now()
+    status.value = 'authenticated'
+    return user.value
+  }
+
+  /**
+   * 消费 SSO 顶层重定向结果，或恢复本站已有的 CloudBase 会话。
+   * 保留旧方法名以兼容现有调用；这里不再发起跨站 iframe 静默登录。
+   */
+  async function syncSilently() {
+    if (!import.meta.client)
+      return user.value
+    if (pendingSync)
+      return pendingSync
+
+    pendingSync = (async () => {
+      status.value = 'checking'
+      error.value = ''
+
+      const hasRedirectResult = hasSsoRedirectResult(window.location.hash)
+      const redirect = consumeSsoRedirect()
+      if (hasRedirectResult && !redirect) {
+        status.value = user.value ? 'authenticated' : 'error'
+        error.value = '登录校验信息已失效，请重新登录'
+        return user.value
+      }
+      if (redirect && !redirect.ok) {
+        status.value = user.value ? 'authenticated' : 'error'
+        error.value = ssoFailMessage(redirect.reason)
+        return user.value
+      }
+
+      if (redirect?.ok) {
+        const auth = useCloudbaseAuth()
+        const adopted = auth && await adoptSsoCode(auth, redirect, {
+          exchangeUrl: ssoExchangeUrl.value,
+        })
+        if (!adopted)
+          throw new Error('SSO code adoption failed')
+      }
+
+      return await restoreCloudbaseSession()
+    })().catch(() => {
+      status.value = user.value ? 'authenticated' : 'error'
+      error.value = '云乐坊登录状态同步失败'
+      return user.value
+    }).finally(() => {
+      pendingSync = null
+    })
+
+    return pendingSync
+  }
+
+  async function login() {
+    if (!import.meta.client)
+      return user.value
+
     status.value = 'checking'
     error.value = ''
-
-    const res = await signInWithSso(auth, { mode, ssoOrigin: ssoOrigin.value }).catch(() => null)
-
-    if (res?.ok) {
-      const sessionUser = (res.session as { user?: unknown }).user as YunleSessionUser | undefined
-      user.value = mapYunleSsoSession({ user: sessionUser })
-      if (user.value) {
-        lastSyncedAt.value = Date.now()
-        status.value = 'authenticated'
-      }
-      else {
-        status.value = 'anonymous'
-      }
-      return user.value
+    try {
+      await startSsoRedirect({
+        clientId: ssoClientId.value,
+        scope: ['identity:bootstrap'],
+        redirectUri: ssoRedirectUri.value,
+        ssoOrigin: ssoOrigin.value,
+      })
     }
-
-    // 失败：未登录 → 清空；网络/超时/弹窗问题 → 保留现有登录态
-    const reason = res?.reason ?? 'error'
-    if (reason === 'not_authenticated') {
-      user.value = null
-      lastSyncedAt.value = 0
-      status.value = 'anonymous'
-    }
-    else if (mode === 'interactive') {
+    catch {
       status.value = user.value ? 'authenticated' : 'error'
-      error.value = ssoFailMessage(reason)
-    }
-    else {
-      status.value = user.value ? 'authenticated' : 'anonymous'
+      error.value = '无法跳转到云乐坊登录页'
     }
     return user.value
   }
 
-  async function syncSilently(options: { force?: boolean } = {}) {
-    if (!import.meta.client)
-      return user.value
-    if (pendingSilent)
-      return pendingSilent
-
-    const isFresh = Date.now() - lastSyncedAt.value < 5 * 60 * 1000
-    if (!options.force && user.value && isFresh)
-      return user.value
-
-    pendingSilent = runSso('silent').finally(() => {
-      pendingSilent = null
-    })
-    return pendingSilent
-  }
-
-  async function login() {
-    return runSso('interactive')
-  }
-
   async function refresh() {
-    return syncSilently({ force: true })
+    return syncSilently()
   }
 
   async function logout() {
@@ -126,9 +184,7 @@ export const useUserStore = defineStore('user', () => {
       await auth?.signOut()
     }
     catch {}
-    user.value = null
-    lastSyncedAt.value = 0
-    status.value = 'idle'
+    clearUser('idle')
     error.value = ''
   }
 
