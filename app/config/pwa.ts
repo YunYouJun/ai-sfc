@@ -14,7 +14,9 @@ export const pwa: ModuleOptions = {
     name: appName,
     short_name: appName,
     description: appDescription,
-    theme_color: '#ffffff',
+    lang: 'zh-CN',
+    theme_color: '#b3261e',
+    background_color: '#fff8ec',
     icons: [
       {
         src: 'pwa-192x192.png',
@@ -30,7 +32,7 @@ export const pwa: ModuleOptions = {
         src: 'maskable-icon.png',
         sizes: '512x512',
         type: 'image/png',
-        purpose: 'any maskable',
+        purpose: 'maskable',
       },
     ],
   },

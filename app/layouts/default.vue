@@ -20,7 +20,14 @@ watch(visibility, (state) => {
   <main class="app-shell">
     <header class="app-header">
       <NuxtLink class="brand-lockup" to="/" aria-label="AI 春联">
-        <span class="brand-mark font-zmx" aria-hidden="true">春</span>
+        <img
+          class="brand-mark"
+          src="/brand/ai-sfc-logo.svg"
+          width="256"
+          height="256"
+          alt=""
+          aria-hidden="true"
+        >
         <span class="brand-copy">
           <strong>AI 春联</strong>
         </span>
@@ -95,20 +102,11 @@ watch(visibility, (state) => {
 }
 
 .brand-mark {
-  width: 2.65rem;
-  height: 2.65rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(255, 220, 137, 0.48);
-  border-radius: 8px;
-  background: linear-gradient(145deg, rgba(255, 242, 199, 0.18), transparent 42%), var(--sfc-seal);
-  box-shadow:
-    inset 0 0 0 3px rgba(255, 242, 199, 0.16),
-    0 14px 36px rgba(109, 24, 18, 0.18);
-  color: var(--sfc-gold-soft);
-  font-size: 1.72rem;
-  line-height: 1;
+  width: 2.9rem;
+  height: 2.9rem;
+  flex: 0 0 auto;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 16px rgba(109, 24, 18, 0.2));
 }
 
 .brand-copy {
@@ -196,9 +194,8 @@ watch(visibility, (state) => {
   }
 
   .brand-mark {
-    width: 2.35rem;
-    height: 2.35rem;
-    font-size: 1.5rem;
+    width: 2.55rem;
+    height: 2.55rem;
   }
 
   .header-actions {

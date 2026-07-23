@@ -29,9 +29,11 @@ export default defineNuxtConfig({
       // <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       // <link href="https://fonts.googleapis.com/css2?family=Zhi+Mang+Xing&display=swap" rel="stylesheet">
       link: [
-        // { rel: 'icon', href: '/favicon.ico', sizes: 'any' },
-        { rel: 'icon', type: 'image/svg+xml', href: '/layout-column-line.svg' },
-        { rel: 'apple-touch-icon', href: '/layout-column-line.svg' },
+        { rel: 'icon', href: '/favicon.ico', sizes: 'any' },
+        { rel: 'icon', type: 'image/png', href: '/favicon-32x32.png', sizes: '32x32' },
+        { rel: 'icon', type: 'image/png', href: '/favicon-16x16.png', sizes: '16x16' },
+        { rel: 'icon', type: 'image/svg+xml', href: '/brand/ai-sfc-logo.svg', sizes: 'any' },
+        { rel: 'apple-touch-icon', href: '/apple-touch-icon.png', sizes: '180x180' },
 
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: 'anonymous' },
@@ -41,6 +43,7 @@ export default defineNuxtConfig({
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
         { name: 'description', content: appDescription },
+        { name: 'theme-color', content: '#b3261e' },
         { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
       ],
       script: [
