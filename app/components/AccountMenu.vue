@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useAvatarUrl } from '~/composables/avatar-url'
+
 const userStore = useUserStore()
 const wallet = useWalletStore()
 const open = shallowRef(false)
@@ -6,6 +8,17 @@ const open = shallowRef(false)
 const accountInitial = computed(() => userStore.displayName.slice(0, 1).toUpperCase())
 const userSubtitle = computed(() => userStore.user?.email || userStore.user?.phone || userStore.user?.login || '云乐坊账号')
 const rechargeUrl = computed(() => userStore.getYunleUrl('/wallet?from=ai-sfc'))
+const resolvedAvatar = useAvatarUrl(() => userStore.user?.avatar)
+const avatarLoadFailed = shallowRef(false)
+const visibleAvatar = computed(() => avatarLoadFailed.value ? '' : resolvedAvatar.value)
+
+watch(resolvedAvatar, () => {
+  avatarLoadFailed.value = false
+})
+
+function handleAvatarError() {
+  avatarLoadFailed.value = true
+}
 
 async function login() {
   await userStore.login()
@@ -39,10 +52,11 @@ onMounted(() => {
       @click="open = !open"
     >
       <img
-        v-if="userStore.user?.avatar"
-        :src="userStore.user.avatar"
+        v-if="visibleAvatar"
+        :src="visibleAvatar"
         :alt="userStore.displayName"
         class="account-avatar"
+        @error="handleAvatarError"
       >
       <span v-else class="account-avatar account-avatar-fallback">{{ accountInitial }}</span>
       <span class="account-name">{{ userStore.displayName }}</span>
@@ -67,10 +81,11 @@ onMounted(() => {
     <div v-if="userStore.isAuthenticated && open" class="account-popover">
       <div class="account-card-header">
         <img
-          v-if="userStore.user?.avatar"
-          :src="userStore.user.avatar"
+          v-if="visibleAvatar"
+          :src="visibleAvatar"
           :alt="userStore.displayName"
           class="account-card-avatar"
+          @error="handleAvatarError"
         >
         <span v-else class="account-card-avatar account-avatar-fallback">{{ accountInitial }}</span>
         <div class="account-card-copy">
