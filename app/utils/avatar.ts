@@ -1,7 +1,9 @@
 const CLOUDBASE_FILE_ID_PREFIX = 'cloud://'
 const AVATAR_PATH_PREFIX = '/avatars/'
 
-export type GetTempFileURL = (options: { fileList: string[] }) => Promise<unknown>
+export const AVATAR_SIGNED_URL_TTL_SECONDS = 7 * 24 * 60 * 60
+
+export type CreateSignedUrl = (fileID: string, expiresIn: number) => Promise<unknown>
 
 /**
  * 把旧的 CloudBase 临时头像地址还原为可长期保存的文件 ID。
@@ -40,31 +42,24 @@ export function toCloudbaseAvatarFileID(
   }
 }
 
-export function pickTempFileURL(result: unknown, fileID: string): string | undefined {
+export function pickSignedUrl(result: unknown): string | undefined {
   if (!result || typeof result !== 'object')
     return undefined
 
-  const fileList = (result as { fileList?: unknown }).fileList
-  if (!Array.isArray(fileList))
+  const data = (result as { data?: unknown }).data
+  if (!data || typeof data !== 'object')
     return undefined
 
-  const item = fileList.find(file =>
-    file
-    && typeof file === 'object'
-    && (file as { fileID?: unknown }).fileID === fileID,
-  ) || fileList[0]
-  const tempFileURL = item && typeof item === 'object'
-    ? (item as { tempFileURL?: unknown }).tempFileURL
-    : undefined
+  const signedUrl = (data as { signedUrl?: unknown }).signedUrl
 
-  return typeof tempFileURL === 'string' && tempFileURL ? tempFileURL : undefined
+  return typeof signedUrl === 'string' && signedUrl ? signedUrl : undefined
 }
 
 /** 把头像来源解析为当前浏览器可访问的 URL。 */
 export async function resolveAvatarUrl(
   value: string | null | undefined,
   envId: string,
-  getTempFileURL: GetTempFileURL,
+  createSignedUrl: CreateSignedUrl,
 ): Promise<string | undefined> {
   const source = value?.trim()
   if (!source)
@@ -75,8 +70,8 @@ export async function resolveAvatarUrl(
     return source
 
   try {
-    const result = await getTempFileURL({ fileList: [fileID] })
-    return pickTempFileURL(result, fileID)
+    const result = await createSignedUrl(fileID, AVATAR_SIGNED_URL_TTL_SECONDS)
+    return pickSignedUrl(result)
   }
   catch {
     return undefined
