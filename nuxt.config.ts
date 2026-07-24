@@ -77,6 +77,9 @@ export default defineNuxtConfig({
     openaiModel: 'deepseek-chat',
     public: {
       cloudbaseEnvId: 'yunlefun-8g7ybcxc7345c490',
+      // Publishable Key 可安全下发到浏览器，仅按 CloudBase 安全规则访问公开资源。
+      // 头像读取依赖它支持未登录访问；服务端 API Key/Secret 不得放在这里。
+      cloudbaseAccessKey: process.env.NUXT_PUBLIC_CLOUDBASE_ACCESS_KEY || '',
       yunleSsoClientId: process.env.NUXT_PUBLIC_YUNLE_SSO_CLIENT_ID || 'ai-sfc-web',
       yunleSsoExchangeUrl: process.env.NUXT_PUBLIC_YUNLE_SSO_EXCHANGE_URL || 'https://api.yunle.fun/sso-ticket',
       yunleSsoOrigin: process.env.NUXT_PUBLIC_YUNLE_SSO_ORIGIN || 'https://www.yunle.fun',
