@@ -8,6 +8,7 @@ import {
   startSsoRedirect,
 } from '@yunlefun/sso'
 import { acceptHMRUpdate, defineStore } from 'pinia'
+import { withTimeout } from '~/utils/promise-timeout'
 import { requestYunleAppAuthorization } from '~/utils/yunle-app-sso'
 import {
   defaultYunleSsoOrigin,
@@ -17,6 +18,8 @@ import {
 } from '~/utils/yunle-sso'
 
 const ns = 'ai-sfc'
+const SILENT_SESSION_TIMEOUT_MS = 5_000
+const INTERACTIVE_AUTH_TIMEOUT_MS = 15_000
 
 type AuthStatus = 'idle' | 'checking' | 'authenticated' | 'anonymous' | 'error'
 
@@ -79,12 +82,18 @@ export const useUserStore = defineStore('user', () => {
     status.value = nextStatus
   }
 
-  async function restoreCloudbaseSession(): Promise<YunleUser | null> {
+  async function restoreCloudbaseSession(
+    timeoutMs = SILENT_SESSION_TIMEOUT_MS,
+  ): Promise<YunleUser | null> {
     const auth = useCloudbaseAuth()
     if (!auth)
       return user.value
 
-    const { data, error: sessionError } = await auth.getSession()
+    const { data, error: sessionError } = await withTimeout(
+      auth.getSession(),
+      timeoutMs,
+      'CloudBase session restore timed out',
+    )
     const session = data?.session
     if (sessionError || !session || session.user?.is_anonymous) {
       clearUser('anonymous')
@@ -120,6 +129,13 @@ export const useUserStore = defineStore('user', () => {
       status.value = 'checking'
       error.value = ''
 
+      // App 内没有本站缓存账号时必须等用户点击授权；不要在首屏发起一个可能
+      // 长时间等待的 CloudBase 恢复请求，也不能用它替代 consent 面板。
+      if (window.ylf?.inYunleApp && !user.value) {
+        clearUser('anonymous')
+        return null
+      }
+
       const hasRedirectResult = hasSsoRedirectResult(window.location.hash)
       const redirect = consumeSsoRedirect()
       if (hasRedirectResult && !redirect) {
@@ -135,9 +151,13 @@ export const useUserStore = defineStore('user', () => {
 
       if (redirect?.ok) {
         const auth = useCloudbaseAuth()
-        const adopted = auth && await adoptSsoCode(auth, redirect, {
-          exchangeUrl: ssoExchangeUrl.value,
-        })
+        const adopted = auth && await withTimeout(
+          adoptSsoCode(auth, redirect, {
+            exchangeUrl: ssoExchangeUrl.value,
+          }),
+          INTERACTIVE_AUTH_TIMEOUT_MS,
+          'SSO code adoption timed out',
+        )
         if (!adopted)
           throw new Error('SSO code adoption failed')
       }
@@ -179,12 +199,16 @@ export const useUserStore = defineStore('user', () => {
       }
       if (native.kind === 'authorized') {
         const auth = useCloudbaseAuth()
-        const adopted = auth && await adoptSsoCode(auth, native.authorization, {
-          exchangeUrl: ssoExchangeUrl.value,
-        })
+        const adopted = auth && await withTimeout(
+          adoptSsoCode(auth, native.authorization, {
+            exchangeUrl: ssoExchangeUrl.value,
+          }),
+          INTERACTIVE_AUTH_TIMEOUT_MS,
+          'Native SSO code adoption timed out',
+        )
         if (!adopted)
           throw new Error('Native SSO code adoption failed')
-        return await restoreCloudbaseSession()
+        return await restoreCloudbaseSession(INTERACTIVE_AUTH_TIMEOUT_MS)
       }
 
       await startSsoRedirect({
