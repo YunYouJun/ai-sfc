@@ -41,7 +41,8 @@ pnpm dev
 部署在 **EdgeOne Pages**（国内 CDN 加速），自定义域名 <https://ai-sfc.yunle.fun>。
 
 - **SSO v3**：登录使用 `@yunlefun/sso@^0.5.0` 的顶层 Redirect、一次性授权码与 S256 PKCE，不使用 iframe、popup 或跨站 session 转发。Consumer 使用公开标识 `ai-sfc-web`，只请求 `identity:bootstrap`。
-- **精确注册**：Provider Client Registry 必须为 `ai-sfc-web` 登记精确 HTTPS Origin 与回调地址；生产主站为 `https://ai-sfc.yunle.fun/`。通配域名和未登记镜像均会失败关闭；如需支持 `ai-sfc.yunyoujun.cn`，应为它增加精确注册。
+- **App 原生授权**：检测到可用的 `window.ylf.authorize` 时，以 `prompt: 'consent'` 请求当前宿主账号；宿主未登录时再进入系统账号选择。用户取消不会静默降级为 Web 登录。
+- **精确注册**：Provider Client Registry 必须为 `ai-sfc-web` 登记精确 HTTPS Origin 与回调地址；唯一生产主站为 `https://ai-sfc.yunle.fun/`。通配域名和旧镜像均会失败关闭，旧入口应跳转到该主域。
 - **本地联调**：SSO v3 不接受普通 `http://localhost`。需要使用 Registry 登记的 `.yunle.localhost` HTTPS Origin，并通过 `NUXT_PUBLIC_YUNLE_SSO_ORIGIN`、`NUXT_PUBLIC_YUNLE_SSO_REDIRECT_URI` 切换到 development issuer 与对应回调。
 - **服务端 API**：EdgeOne Pages 跑 V8 边缘函数、**不运行 Nitro**，故登录扣费的服务端逻辑放在 `functions/api/*`（EdgeOne `onRequest`，与 Nitro `server/api/*` 共用 `packages/server` 的计费/CloudBase 编排）。本地 `pnpm dev` 走 Nitro 路由、`edgeone pages dev` 走 EdgeOne 函数，两者等价。
 

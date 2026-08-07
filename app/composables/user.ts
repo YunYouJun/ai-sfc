@@ -8,6 +8,7 @@ import {
   startSsoRedirect,
 } from '@yunlefun/sso'
 import { acceptHMRUpdate, defineStore } from 'pinia'
+import { requestYunleAppAuthorization } from '~/utils/yunle-app-sso'
 import {
   defaultYunleSsoOrigin,
   mapYunleSsoSession,
@@ -160,6 +161,32 @@ export const useUserStore = defineStore('user', () => {
     status.value = 'checking'
     error.value = ''
     try {
+      const native = await requestYunleAppAuthorization({
+        clientId: ssoClientId.value,
+        scope: ['identity:bootstrap'],
+        redirectUri: ssoRedirectUri.value,
+        ssoOrigin: ssoOrigin.value,
+      })
+      if (native.kind === 'denied') {
+        status.value = user.value ? 'authenticated' : 'error'
+        error.value = '已取消云乐坊登录授权'
+        return user.value
+      }
+      if (native.kind === 'failed') {
+        status.value = user.value ? 'authenticated' : 'error'
+        error.value = '云乐坊 App 授权失败，请重试'
+        return user.value
+      }
+      if (native.kind === 'authorized') {
+        const auth = useCloudbaseAuth()
+        const adopted = auth && await adoptSsoCode(auth, native.authorization, {
+          exchangeUrl: ssoExchangeUrl.value,
+        })
+        if (!adopted)
+          throw new Error('Native SSO code adoption failed')
+        return await restoreCloudbaseSession()
+      }
+
       await startSsoRedirect({
         clientId: ssoClientId.value,
         scope: ['identity:bootstrap'],
@@ -169,7 +196,9 @@ export const useUserStore = defineStore('user', () => {
     }
     catch {
       status.value = user.value ? 'authenticated' : 'error'
-      error.value = '无法跳转到云乐坊登录页'
+      error.value = window.ylf?.inYunleApp
+        ? '云乐坊 App 登录状态同步失败'
+        : '无法跳转到云乐坊登录页'
     }
     return user.value
   }
