@@ -1,4 +1,4 @@
-import type { SsoFailureReason } from '@yunlefun/sso'
+import type { SsoAuthorizationResult, SsoFailureReason } from '@yunlefun/sso'
 import type { YunleSessionUser, YunleUser } from '~/utils/yunle-sso'
 import { useStorage } from '@vueuse/core'
 import {
@@ -43,6 +43,11 @@ export const useUserStore = defineStore('user', () => {
   const status = shallowRef<AuthStatus>(user.value ? 'authenticated' : 'idle')
   const error = shallowRef('')
   let pendingSync: Promise<YunleUser | null> | null = null
+  let pendingAdoption: {
+    abandoned: boolean
+    controller: AbortController
+    promise: Promise<boolean>
+  } | null = null
 
   const ssoOrigin = computed(() =>
     trimTrailingSlash(readString(runtimeConfig.public.yunleSsoOrigin) || defaultYunleSsoOrigin),
@@ -80,6 +85,83 @@ export const useUserStore = defineStore('user', () => {
     user.value = null
     lastSyncedAt.value = 0
     status.value = nextStatus
+  }
+
+  function abandonPendingAdoption() {
+    if (!pendingAdoption)
+      return
+    pendingAdoption.abandoned = true
+    pendingAdoption.controller.abort()
+  }
+
+  /**
+   * 一次只允许一个 code adoption。超时会中止 code exchange，并在迟到的 SDK
+   * 操作最终结束后再次登出；在它完成前拒绝重试，避免旧操作覆盖新会话。
+   */
+  async function adoptAuthorization(
+    auth: NonNullable<ReturnType<typeof useCloudbaseAuth>>,
+    authorization: SsoAuthorizationResult,
+    timeoutMessage: string,
+  ): Promise<boolean> {
+    if (pendingAdoption)
+      throw new Error('Previous SSO code adoption is still finishing')
+
+    const controller = new AbortController()
+    const state = {
+      abandoned: false,
+      controller,
+      promise: Promise.resolve(false),
+    }
+    const operation = adoptSsoCode(auth, authorization, {
+      exchangeUrl: ssoExchangeUrl.value,
+      fetch: (input, init) => globalThis.fetch(input, {
+        ...init,
+        signal: controller.signal,
+      }),
+    })
+    state.promise = operation.then(
+      async (adopted) => {
+        if (state.abandoned) {
+          try {
+            await auth.signOut()
+          }
+          catch {}
+          return false
+        }
+        return adopted
+      },
+      async (cause) => {
+        if (state.abandoned) {
+          try {
+            await auth.signOut()
+          }
+          catch {}
+        }
+        throw cause
+      },
+    ).finally(() => {
+      if (pendingAdoption === state)
+        pendingAdoption = null
+    })
+    pendingAdoption = state
+
+    try {
+      return await withTimeout(
+        state.promise,
+        INTERACTIVE_AUTH_TIMEOUT_MS,
+        timeoutMessage,
+        () => {
+          state.abandoned = true
+          controller.abort()
+        },
+      )
+    }
+    catch (cause) {
+      state.abandoned = true
+      controller.abort()
+      void auth.signOut().catch(() => undefined)
+      throw cause
+    }
   }
 
   async function restoreCloudbaseSession(
@@ -129,44 +211,41 @@ export const useUserStore = defineStore('user', () => {
       status.value = 'checking'
       error.value = ''
 
-      // App 内没有本站缓存账号时必须等用户点击授权；不要在首屏发起一个可能
-      // 长时间等待的 CloudBase 恢复请求，也不能用它替代 consent 面板。
-      if (window.ylf?.inYunleApp && !user.value) {
-        clearUser('anonymous')
-        return null
-      }
-
       const hasRedirectResult = hasSsoRedirectResult(window.location.hash)
       const redirect = consumeSsoRedirect()
       if (hasRedirectResult && !redirect) {
-        status.value = user.value ? 'authenticated' : 'error'
+        clearUser('error')
         error.value = '登录校验信息已失效，请重新登录'
-        return user.value
+        return null
       }
       if (redirect && !redirect.ok) {
-        status.value = user.value ? 'authenticated' : 'error'
+        clearUser('error')
         error.value = ssoFailMessage(redirect.reason)
-        return user.value
+        return null
       }
 
       if (redirect?.ok) {
         const auth = useCloudbaseAuth()
-        const adopted = auth && await withTimeout(
-          adoptSsoCode(auth, redirect, {
-            exchangeUrl: ssoExchangeUrl.value,
-          }),
-          INTERACTIVE_AUTH_TIMEOUT_MS,
+        const adopted = auth && await adoptAuthorization(
+          auth,
+          redirect,
           'SSO code adoption timed out',
         )
         if (!adopted)
           throw new Error('SSO code adoption failed')
       }
 
+      // 回调必须先消费；只有完全没有回调时，App 首屏才等待用户主动授权。
+      if (window.ylf?.inYunleApp && !user.value && !redirect) {
+        clearUser('anonymous')
+        return null
+      }
+
       return await restoreCloudbaseSession()
     })().catch(() => {
-      status.value = user.value ? 'authenticated' : 'error'
+      clearUser('error')
       error.value = '云乐坊登录状态同步失败'
-      return user.value
+      return null
     }).finally(() => {
       pendingSync = null
     })
@@ -197,13 +276,16 @@ export const useUserStore = defineStore('user', () => {
         error.value = '云乐坊 App 授权失败，请重试'
         return user.value
       }
+      if (native.kind === 'unsupported') {
+        status.value = user.value ? 'authenticated' : 'error'
+        error.value = '当前云乐坊 App 版本不支持账号授权，请升级后重试'
+        return user.value
+      }
       if (native.kind === 'authorized') {
         const auth = useCloudbaseAuth()
-        const adopted = auth && await withTimeout(
-          adoptSsoCode(auth, native.authorization, {
-            exchangeUrl: ssoExchangeUrl.value,
-          }),
-          INTERACTIVE_AUTH_TIMEOUT_MS,
+        const adopted = auth && await adoptAuthorization(
+          auth,
+          native.authorization,
           'Native SSO code adoption timed out',
         )
         if (!adopted)
@@ -219,7 +301,7 @@ export const useUserStore = defineStore('user', () => {
       })
     }
     catch {
-      status.value = user.value ? 'authenticated' : 'error'
+      clearUser('error')
       error.value = window.ylf?.inYunleApp
         ? '云乐坊 App 登录状态同步失败'
         : '无法跳转到云乐坊登录页'
@@ -232,6 +314,7 @@ export const useUserStore = defineStore('user', () => {
   }
 
   async function logout() {
+    abandonPendingAdoption()
     const auth = useCloudbaseAuth()
     try {
       await auth?.signOut()
@@ -239,6 +322,17 @@ export const useUserStore = defineStore('user', () => {
     catch {}
     clearUser('idle')
     error.value = ''
+  }
+
+  async function handleHostIdentityChanged() {
+    abandonPendingAdoption()
+    const auth = useCloudbaseAuth()
+    try {
+      await auth?.signOut()
+    }
+    catch {}
+    clearUser('anonymous')
+    error.value = '云乐坊账号已切换，请重新授权登录'
   }
 
   /** 取当前 access_token（CloudBase SDK 自动续期）；未登录或失效返回空串 */
@@ -268,6 +362,7 @@ export const useUserStore = defineStore('user', () => {
     login,
     refresh,
     logout,
+    handleHostIdentityChanged,
     getAccessToken,
   }
 })

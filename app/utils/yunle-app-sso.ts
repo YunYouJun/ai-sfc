@@ -21,6 +21,7 @@ export interface YunleAppBridge {
 
 export type YunleAppAuthorizationResult
   = | { kind: 'unavailable' }
+    | { kind: 'unsupported' }
     | { kind: 'denied' }
     | { kind: 'failed' }
     | { kind: 'authorized', authorization: SsoAuthorizationResult }
@@ -40,6 +41,10 @@ function readBridge(): YunleAppBridge | undefined {
     && typeof bridge.authorize === 'function'
     ? bridge
     : undefined
+}
+
+function hasYunleAppMarker(): boolean {
+  return typeof window !== 'undefined' && window.ylf?.inYunleApp === true
 }
 
 function randomBase64Url(byteLength = 32): string {
@@ -83,8 +88,8 @@ function isNativeAuthorizationResult(
 }
 
 /**
- * 在云乐坊 App 中请求宿主账号授权。宿主不可用时由调用方继续走 Web PKCE Redirect；
- * 用户拒绝或宿主授权失败时不得静默切换登录通道。
+ * 在云乐坊 App 中请求宿主账号授权。只有普通浏览器（没有 App 标记）可继续走
+ * Web PKCE Redirect；App 已注入但 authorize 不可用时必须提示升级，不能降级。
  */
 export async function requestYunleAppAuthorization(
   options: {
@@ -94,16 +99,17 @@ export async function requestYunleAppAuthorization(
     ssoOrigin: string
   },
   bridge = readBridge(),
+  inYunleApp = bridge?.inYunleApp === true || hasYunleAppMarker(),
 ): Promise<YunleAppAuthorizationResult> {
   if (!bridge)
-    return { kind: 'unavailable' }
+    return { kind: inYunleApp ? 'unsupported' : 'unavailable' }
 
   try {
     if (!await bridge.canIUse('authorize'))
-      return { kind: 'unavailable' }
+      return { kind: 'unsupported' }
   }
   catch {
-    return { kind: 'unavailable' }
+    return { kind: 'unsupported' }
   }
 
   try {

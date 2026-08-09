@@ -61,11 +61,21 @@ describe('yunle app native sso', () => {
     expect(await requestYunleAppAuthorization(options, bridge)).toEqual({ kind: 'denied' })
   })
 
-  it('lets callers use Web redirect only when the native API is unavailable', async () => {
+  it('fails closed when the App marker exists but the native API is unavailable', async () => {
     const bridge = createBridge(vi.fn())
     vi.mocked(bridge.canIUse).mockResolvedValue(false)
-    expect(await requestYunleAppAuthorization(options, bridge)).toEqual({ kind: 'unavailable' })
+    expect(await requestYunleAppAuthorization(options, bridge)).toEqual({ kind: 'unsupported' })
     expect(bridge.authorize).not.toHaveBeenCalled()
+  })
+
+  it('allows Web redirect only in an ordinary browser', async () => {
+    expect(await requestYunleAppAuthorization(options, undefined, false))
+      .toEqual({ kind: 'unavailable' })
+  })
+
+  it('fails closed when an App marker has a malformed bridge', async () => {
+    expect(await requestYunleAppAuthorization(options, undefined, true))
+      .toEqual({ kind: 'unsupported' })
   })
 
   it('rejects a code returned for another issuer', async () => {

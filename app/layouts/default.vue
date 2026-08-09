@@ -7,7 +7,17 @@ const visibility = useDocumentVisibility()
 
 onMounted(() => {
   userStore.syncSilently()
+  if (window.ylf?.inYunleApp)
+    window.addEventListener('ylf:host-identity-changed', handleHostIdentityChanged)
 })
+
+onBeforeUnmount(() => {
+  window.removeEventListener('ylf:host-identity-changed', handleHostIdentityChanged)
+})
+
+function handleHostIdentityChanged() {
+  void userStore.handleHostIdentityChanged()
+}
 
 // 从云乐坊钱包等外部页返回（充值后）时刷新余额
 watch(visibility, (state) => {

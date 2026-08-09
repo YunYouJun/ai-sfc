@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { withTimeout } from '../app/utils/promise-timeout'
 
 describe('promise timeout', () => {
@@ -13,8 +13,10 @@ describe('promise timeout', () => {
   })
 
   it('rejects an operation that never settles', async () => {
+    const onTimeout = vi.fn()
     await expect(
-      withTimeout(new Promise(() => {}), 1, 'timed out'),
+      withTimeout(new Promise(() => {}), 1, 'timed out', onTimeout),
     ).rejects.toThrow('timed out')
+    expect(onTimeout).toHaveBeenCalledOnce()
   })
 })
