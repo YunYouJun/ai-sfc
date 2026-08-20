@@ -12,7 +12,7 @@ function makeDeps(chatImpl?: Parameters<typeof runPaidGeneration>[1]['chat']) {
 
 const base = { token: 'tok', prompt: '家人平安', bizId: 'biz-1' }
 
-describe('runPaidGeneration（经 ai-gateway 单次原子调用）', () => {
+describe('runPaidGeneration（经 AI Runtime 单次原子调用）', () => {
   it('无 token → 401，不调网关', async () => {
     const deps = makeDeps()
     const res = await runPaidGeneration({ ...base, token: null }, deps)

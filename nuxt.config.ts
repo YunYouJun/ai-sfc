@@ -69,8 +69,8 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
-    // 登录扣云币：服务端把用户 access_token 转给 yunle ai-gateway 计费生成（envId 公开，0 服务端密钥）。
-    // 模型 / 模型组由 yunle ai-gateway 服务端按 appId 决定，本侧不再持有（解耦 + 防篡改）。
+    // 登录扣云币：服务端把用户 access_token 转给统一 AI Runtime，模型和计价由服务端策略决定。
+    aiRuntimeBaseUrl: process.env.NUXT_AI_RUNTIME_BASE_URL || '',
     costPerGeneration: 1, // 仅供余额 UI 展示「本次消耗」；权威扣费金额以 yunle 为准
     openaiApiKey: '',
     openaiBaseURL: 'https://api.deepseek.com/v1',

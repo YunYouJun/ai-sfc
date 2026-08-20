@@ -1,14 +1,14 @@
 import type { CoupletMessage, SprintFestivalCouplets } from '../ai/src/couplets'
 import { buildCoupletMessages, parseCoupletContent } from '../ai/src/couplets'
 
-/** ai-gateway 返回的通用结果（结构与 cloudbase.ts 的 GatewayChatResult 一致；此处自定义以与传输层解耦） */
+/** AI Runtime 返回的通用结果；业务编排不依赖具体传输实现。 */
 export type PaidChatOutcome
-  = | { ok: true, content: string, balance: number, deduped: boolean }
+  = | { ok: true, content: string, balance?: number }
     | { ok: false, code: string, message: string }
 
 export interface PaidGenerationDeps {
   /**
-   * 单次原子业务调用：把已构造的 messages 交给 yunle ai-gateway，由网关完成
+   * 单次原子业务调用：把已构造的 messages 交给统一 AI Runtime，由其完成
    * 「验登录 + 余额校验 + 受控调 AI + 扣费」，回 content/balance。
    */
   chat: (token: string, messages: CoupletMessage[], bizId: string) => Promise<PaidChatOutcome>
@@ -21,10 +21,10 @@ export interface PaidGenerationInput {
 }
 
 export type PaidGenerationResult
-  = | { ok: true, couplets: SprintFestivalCouplets, balance: number }
+  = | { ok: true, couplets: SprintFestivalCouplets, balance?: number }
     | { ok: false, statusCode: 400 | 401 | 402 | 502, message: string }
 
-/** ai-gateway 业务码 → HTTP 状态码 */
+/** Runtime 业务码 → HTTP 状态码 */
 const CODE_STATUS: Record<string, 400 | 401 | 402 | 502> = {
   unauthorized: 401,
   insufficient: 402,
@@ -34,7 +34,7 @@ const CODE_STATUS: Record<string, 400 | 401 | 402 | 502> = {
 }
 
 /**
- * 登录扣费生成编排（解耦版）：构造春联 messages → 交 yunle ai-gateway 单次原子完成
+ * 登录扣费生成编排（解耦版）：构造春联 messages → 交统一 AI Runtime 单次原子完成
  * 「验登录 + 扣费 + 受控调 AI」→ 把返回文本解析为春联。
  *
  * 与旧版「查余额 → 用用户 token 直调 AI → 扣费」三步可绕过不同：计费与 AI 调用都在 yunle
@@ -72,7 +72,7 @@ export async function runPaidGeneration(
   if (!couplets)
     return { ok: false, statusCode: 502, message: '模型返回内容无法解析为春联，请重试。' }
 
-  return { ok: true, couplets, balance: outcome.balance }
+  return { ok: true, couplets, ...(outcome.balance === undefined ? {} : { balance: outcome.balance }) }
 }
 
 /** ofetch / fetch 异常是否为鉴权类（401/403） */

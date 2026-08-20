@@ -2,7 +2,7 @@
 
 Powered by [云乐坊 YunLeFun](https://www.yunle.fun).
 
-> 两条生成链路：**未登录**在「设置」填兼容 OpenAI 协议的模型接口与 token，浏览器直连、token 只存本地、不经服务端；**登录**走云币计费，服务端用你的云乐坊 access_token 直调 [CloudBase](https://tcb.cloud.tencent.com/) 模型（无服务端密钥），登录复用 [www.yunle.fun](https://www.yunle.fun) 账户（基于 [@yunlefun/sso](https://www.npmjs.com/package/@yunlefun/sso) 跨站 SSO）。
+> 两条生成链路：**未登录**在「设置」填兼容 OpenAI 协议的模型接口与 token，浏览器直连、token 只存本地、不经服务端；**登录**走云币计费，服务端携带云乐坊 access_token 调用统一 `ai-runtime /ai/v1/chat`，由 Runtime 预留云币、调用模型并在成功交付后确认扣费。登录复用 [www.yunle.fun](https://www.yunle.fun) 账户（基于 [@yunlefun/sso](https://www.npmjs.com/package/@yunlefun/sso) 跨站 SSO）。
 
 - 字体：[MaShanZheng | Google Fonts](https://fonts.google.com/specimen/Ma+Shan+Zheng)
 
@@ -43,7 +43,7 @@ pnpm dev
 - **SSO v3**：登录使用 `@yunlefun/sso@^0.5.0` 的顶层 Redirect、一次性授权码与 S256 PKCE，不使用 iframe、popup 或跨站 session 转发。Consumer 使用公开标识 `ai-sfc-web`，只请求 `identity:bootstrap`。
 - **精确注册**：Provider Client Registry 必须为 `ai-sfc-web` 登记精确 HTTPS Origin 与回调地址；生产主站为 `https://ai-sfc.yunle.fun/`。通配域名和未登记镜像均会失败关闭；如需支持 `ai-sfc.yunyoujun.cn`，应为它增加精确注册。
 - **本地联调**：SSO v3 不接受普通 `http://localhost`。需要使用 Registry 登记的 `.yunle.localhost` HTTPS Origin，并通过 `NUXT_PUBLIC_YUNLE_SSO_ORIGIN`、`NUXT_PUBLIC_YUNLE_SSO_REDIRECT_URI` 切换到 development issuer 与对应回调。
-- **服务端 API**：EdgeOne Pages 跑 V8 边缘函数、**不运行 Nitro**，故登录扣费的服务端逻辑放在 `functions/api/*`（EdgeOne `onRequest`，与 Nitro `server/api/*` 共用 `packages/server` 的计费/CloudBase 编排）。本地 `pnpm dev` 走 Nitro 路由、`edgeone pages dev` 走 EdgeOne 函数，两者等价。
+- **服务端 API**：EdgeOne Pages 跑 V8 边缘函数、**不运行 Nitro**，故登录扣费的服务端逻辑放在 `functions/api/*`（EdgeOne `onRequest`，与 Nitro `server/api/*` 共用 `packages/server` 的计费与 Runtime 适配器）。本地 `pnpm dev` 走 Nitro 路由、`edgeone pages dev` 走 EdgeOne 函数，两者等价。
 
 ## FAQ
 

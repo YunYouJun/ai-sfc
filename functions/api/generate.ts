@@ -1,7 +1,7 @@
 import { readProviderString } from '../../app/utils/ai-provider'
 import { parseBearerToken } from '../../packages/server/bearer'
 import { runPaidGeneration } from '../../packages/server/billing'
-import { aiChatViaGateway } from '../../packages/server/cloudbase'
+import { aiChatViaRuntime } from '../../packages/server/runtime'
 
 /**
  * EdgeOne Pages Function：登录扣云币生成春联（POST /api/generate）。
@@ -9,8 +9,7 @@ import { aiChatViaGateway } from '../../packages/server/cloudbase'
  * 线上部署在 EdgeOne Pages，不跑 Nitro，故服务端逻辑以 Web 标准 onRequest 落地；
  * 与 Nitro `server/api/generate.ts`（本地 `pnpm dev` 用）共用 `packages/server` 的计费编排。
  *
- * 生成统一经 yunle ai-gateway 云函数（验登录 + 扣费 + 管理员身份调 AI），本侧 0 服务端密钥、
- * 也不再用用户 token 直调 AI（已堵白嫖洞）。模型 / 计价由 yunle 服务端按 appId 决定，本侧不配。
+ * 生成统一经 YunLeFun AI Runtime（验登录、模型调度与结算），本侧不持有模型密钥。
  */
 interface EdgeContext {
   request: Request
@@ -42,13 +41,22 @@ export async function onRequest({ request, env }: EdgeContext): Promise<Response
   if (!prompt)
     return json({ message: '请输入春联提示词。' }, 400)
 
-  const envId = readProviderString(env.NUXT_PUBLIC_CLOUDBASE_ENV_ID) || 'yunlefun-8g7ybcxc7345c490'
+  const runtimeBaseUrl = readProviderString(env.AI_RUNTIME_BASE_URL)
+  if (!runtimeBaseUrl)
+    return json({ message: 'AI Runtime 尚未配置。' }, 503)
   const token = parseBearerToken(request.headers.get('authorization'))
   const bizId = readProviderString(body.bizId) || crypto.randomUUID()
 
   const result = await runPaidGeneration(
     { token, prompt, bizId },
-    { chat: (t, messages, id) => aiChatViaGateway(envId, t, { appId: APP_ID, messages, bizId: id }) },
+    {
+      chat: (t, messages, id) => aiChatViaRuntime(runtimeBaseUrl, t, {
+        applicationId: APP_ID,
+        messages,
+        idempotencyKey: id,
+        origin: 'https://ai-sfc.yunle.fun',
+      }),
+    },
   )
 
   if (!result.ok)

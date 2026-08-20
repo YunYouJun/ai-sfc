@@ -9,8 +9,8 @@ import {
 } from '../../app/utils/ai-provider'
 import { getCoupletDataByPrompt } from '../../packages/server'
 import { runPaidGeneration } from '../../packages/server/billing'
-import { aiChatViaGateway } from '../../packages/server/cloudbase'
 import { readBearerToken } from '../../packages/server/identity'
+import { aiChatViaRuntime } from '../../packages/server/runtime'
 
 interface GenerateBody {
   prompt?: unknown
@@ -27,13 +27,20 @@ function readGenerateError(error: unknown) {
 }
 
 /**
- * 登录扣费：经 yunle ai-gateway 单次原子完成「验登录 + 扣费 + 受控调 AI」。
- * 模型 / 计价由 yunle 服务端按 appId 决定，本侧只传 envId（网关 URL）+ 用户 token。
+ * 登录扣费：经统一 AI Runtime 完成「验登录 + 扣费 + 受控调 AI」。
+ * 模型 / 计价由 YunLeFun 服务端按 applicationId 决定，本侧只传 Runtime URL 与用户 token。
  */
-async function generatePaid(event: H3Event, prompt: string, bizId: string, envId: string) {
+async function generatePaid(event: H3Event, prompt: string, bizId: string, runtimeBaseUrl: string) {
   const result = await runPaidGeneration(
     { token: readBearerToken(event), prompt, bizId: bizId || globalThis.crypto.randomUUID() },
-    { chat: (token, messages, id) => aiChatViaGateway(envId, token, { appId: APP_ID, messages, bizId: id }) },
+    {
+      chat: (token, messages, id) => aiChatViaRuntime(runtimeBaseUrl, token, {
+        applicationId: APP_ID,
+        messages,
+        idempotencyKey: id,
+        origin: 'https://ai-sfc.yunle.fun',
+      }),
+    },
   )
 
   if (!result.ok) {
@@ -46,7 +53,7 @@ async function generatePaid(event: H3Event, prompt: string, bizId: string, envId
   return { ...result.couplets, balance: result.balance }
 }
 
-/** 降级：未配 CloudBase envId 时回退到服务端 env key（不鉴权、不扣费，本地 dev 用） */
+/** 降级：未配置 Runtime 时回退到服务端 env key（不鉴权、不扣费，仅供本地开发）。 */
 async function generateFallback(prompt: string, runtimeConfig: Record<string, unknown>) {
   const provider = {
     apiKey: readProviderString(runtimeConfig.openaiApiKey) || readProviderString(process.env.OPENAI_API_KEY),
@@ -100,12 +107,11 @@ export default defineEventHandler(async (event) => {
   }
 
   const runtimeConfig = useRuntimeConfig(event) as Record<string, unknown>
-  const pub = (runtimeConfig.public ?? {}) as Record<string, unknown>
-  const envId = readProviderString(pub.cloudbaseEnvId)
+  const runtimeBaseUrl = readProviderString(runtimeConfig.aiRuntimeBaseUrl)
 
-  // 配了 CloudBase envId → 登录扣费链路（经 ai-gateway）；否则降级 DeepSeek（本地未配时仍可跑）
-  if (envId)
-    return await generatePaid(event, prompt, readProviderString(body.bizId), envId)
+  // 配置 Runtime 后启用登录扣费链路；否则降级到仅供本地开发的 BYOK。
+  if (runtimeBaseUrl)
+    return await generatePaid(event, prompt, readProviderString(body.bizId), runtimeBaseUrl)
 
   return await generateFallback(prompt, runtimeConfig)
 })
