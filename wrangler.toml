@@ -1,6 +1,7 @@
-# Cloudflare Pages（全球镜像 ai-sfc.yunyoujun.cn / ai-sfc.pages.dev）配置。
+# Cloudflare Pages（旧域名 ai-sfc.yunyoujun.cn / ai-sfc.pages.dev）配置。
 # 构建时 nuxt.config 在 CF_PAGES=1 下用 static preset → 纯静态产物（无 _worker.js），
-# 避免与根目录 functions/ 冲突；/api 由 functions/ 作为 CF Pages Functions 承载。
+# 避免与根目录 functions/ 冲突；旧域名由 functions/_middleware.ts 统一 308
+# 到唯一生产主域 https://ai-sfc.yunle.fun。
 # EdgeOne 部署忽略本文件、不受影响。
 name = "ai-sfc"
 compatibility_date = "2024-09-23"

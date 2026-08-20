@@ -29,6 +29,7 @@ export default defineNuxtConfig({
       // <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       // <link href="https://fonts.googleapis.com/css2?family=Zhi+Mang+Xing&display=swap" rel="stylesheet">
       link: [
+        { rel: 'canonical', href: 'https://ai-sfc.yunle.fun/' },
         { rel: 'icon', href: '/favicon.ico', sizes: 'any' },
         { rel: 'icon', type: 'image/png', href: '/favicon-32x32.png', sizes: '32x32' },
         { rel: 'icon', type: 'image/png', href: '/favicon-16x16.png', sizes: '16x16' },
